@@ -63,7 +63,9 @@ typedef struct
     u32 *table;
     int last_adc_val;
     int last_lux_val;
+#if FILTER
     int last_brightness_step;
+#endif
     struct input_dev *inputdevice;
     struct timer_list *light_polling_timer;
     unsigned int polling_time;
@@ -131,7 +133,9 @@ static L_device_t L_dev =
     .table = L_table,
     .last_adc_val = 0,
     .last_lux_val = 0,
+#if FILTER
     .last_brightness_step = -1,
+#endif
     .inputdevice = NULL,
     .polling_time = DEFAULT_POLLING_INTERVAL,
     .cur_polling_state = L_SYSFS_POLLING_OFF,
@@ -167,7 +171,9 @@ static int adc_vs_lux_table[][3] = {
     { 0, 0, 0}
 };
 
+#if FILTER
 static int brightness_step_table[] = { 0, 15, 150, 1500, 10000000 };
+#endif
 
 /**************************************************************/
 /*for synchronization mechanism*/
@@ -669,8 +675,10 @@ static void L_dev_work_func (struct work_struct *unused)
     u32 adc_val;
     int lux = 11000;
     int i = 0;
+#if FILTER
     int step = 0;
     int final = 0;
+#endif
 
     trace_in() ;
 
@@ -731,10 +739,11 @@ static void L_dev_work_func (struct work_struct *unused)
             }
             else
             {
+#if FILTER
                 i = 0;
                 step = 0;
                 final = sizeof(brightness_step_table)/sizeof(int);
-                
+
                 for(; i < final - 1; i++)
                 {
                     if((lux >= brightness_step_table[i]) && (lux < brightness_step_table[i+1]))
@@ -745,12 +754,15 @@ static void L_dev_work_func (struct work_struct *unused)
                 }
                 
                 if(L_dev.last_brightness_step != step)
+#endif
                 {
                     input_report_abs(L_dev.inputdevice, ABS_MISC, lux);
                     input_sync(L_dev.inputdevice);
                     //L_dev.last_lux_val = lux;
+#if FILTER
                     L_dev.last_brightness_step = step;
-		     printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d lux = %d \n", __func__, adc_val, lux);			
+                    printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d lux = %d \n", __func__, adc_val, lux);
+#endif
                 }
             }
         }
