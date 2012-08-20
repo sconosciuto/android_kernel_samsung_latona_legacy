@@ -27,8 +27,7 @@ struct sec_led_data {
 //			unsigned long *delay_on, unsigned long *delay_off);
 };
 
-static int led_state =0;
-static int bln_state=0;
+static int bln_state = 0;
 
 static int bl_timeout = 1600;
 static struct timer_list bl_timer;
@@ -39,17 +38,17 @@ void bl_timer_callback(unsigned long data)
 {
 	schedule_work(&bl_off_work);
 }
+
 static void bl_off(struct work_struct *bl_off_work)
 {
-	if(bln_state==0)
-	{
+	if(bln_state == 0) {
 		gpio_set_value(OMAP_GPIO_LED_EN1, 0);
 		gpio_set_value(OMAP_GPIO_LED_EN2, 0);
 	}
-	led_state = 0;
 }
 
-static void bl_set_timeout() {
+static void bl_set_timeout(void)
+{
 	if (bl_timeout > 0) {
 		mod_timer(&bl_timer, jiffies + msecs_to_jiffies(bl_timeout));
 	}
@@ -58,24 +57,25 @@ static void bl_set_timeout() {
 void trigger_touchkey_led(int event)
 {
 	//event: 0-All Lights | 1-Menu Pressed | 2-Back Pressed	| 3- All Key Release
-	if(bl_timeout!=0)
-	{
-		if((event==3)&&(led_state==0)) return; //Dont lightup if keys already turned off
-
-		if((event==0)||(event==3))
-		{
+	if(bl_timeout != 0) {
+		switch (event) {
+		case 0:
 			gpio_set_value(OMAP_GPIO_LED_EN1, 1);
 			gpio_set_value(OMAP_GPIO_LED_EN2, 1);
-		}else if(event==1){
-			gpio_set_value(OMAP_GPIO_LED_EN1, 0);
-			gpio_set_value(OMAP_GPIO_LED_EN2, 1);
-		}else if(event==2){
+			bl_set_timeout();
+			break;
+		case 1:
+		case 2:
 			gpio_set_value(OMAP_GPIO_LED_EN1, 1);
-			gpio_set_value(OMAP_GPIO_LED_EN2, 0);
+			gpio_set_value(OMAP_GPIO_LED_EN2, 1);
+			break;
+		case 3:
+			bl_set_timeout();
+			break;
+		default:
+			printk("[LED]: unknown event: %d\n", event);
+			break;
 		}
-		led_state = 1;
-		bln_state = 0;
-		bl_set_timeout();
 	}
 }
 
@@ -83,12 +83,10 @@ EXPORT_SYMBOL(trigger_touchkey_led);
 
 void suspend_touchkey_led()
 {
-	if(bln_state==0)
-	{
+	if(bln_state == 0) {
 		gpio_set_value(OMAP_GPIO_LED_EN1, 0);
 		gpio_set_value(OMAP_GPIO_LED_EN2, 0);
 	}
-	led_state = 0;
 }
 
 EXPORT_SYMBOL(suspend_touchkey_led);
@@ -98,29 +96,15 @@ static void sec_led_set(struct led_classdev *led_cdev,
 {
 	struct sec_led_data *led_dat =
 		container_of(led_cdev, struct sec_led_data, cdev);
-    
-	// printk("[LED] %s ::: value=%d , led_state=%d\n", __func__, value, bln_state);
-	if ((value == LED_OFF)&&( bln_state==1))
-	{
-		if (led_state && bl_timer.expires < jiffies)
-		{
-			gpio_set_value(led_dat->gpio1, 0);
-			gpio_set_value(led_dat->gpio2, 0);
-			printk(KERN_DEBUG "[LED] %s ::: OFF \n", __func__);
-		}
+
+	if (value == LED_OFF) {
+		gpio_set_value(led_dat->gpio1, 0);
+		gpio_set_value(led_dat->gpio2, 0);
 		bln_state = 0;
-	}
-	else if ((value != LED_OFF)&&(bln_state==0))
-	{
+	} else {
 		gpio_set_value(led_dat->gpio1, 1);
 		gpio_set_value(led_dat->gpio2, 1);
 		bln_state = 1;
-		printk(KERN_DEBUG "[LED] %s ::: ON \n", __func__);
-	}
-	else
-	{ 
-		// printk("[LED] %s ::: same state ... \n", __func__);
-		return ;
 	}
 }
 
@@ -137,22 +121,21 @@ static ssize_t bl_timeout_write(struct device *dev, struct device_attribute *att
 static DEVICE_ATTR(bl_timeout, S_IRUGO | S_IWUGO, bl_timeout_read, bl_timeout_write);
 
 static struct attribute *bl_led_attributes[] = {
-&dev_attr_bl_timeout.attr,
-NULL
+	&dev_attr_bl_timeout.attr,
+	NULL
 };
 
 static struct attribute_group bl_led_group = {
-.attrs = bl_led_attributes,
+	.attrs = bl_led_attributes,
 };
 
 static struct miscdevice bl_led_device = {
-.minor = MISC_DYNAMIC_MINOR,
-.name = "notification",
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "notification",
 };
 
 static int sec_led_probe(struct platform_device *pdev)
-{	
-
+{
 	struct led_platform_data *pdata = pdev->dev.platform_data;
 	struct led_info *cur_led;
 	struct sec_led_data *leds_data, *led_dat;
@@ -277,7 +260,7 @@ static struct platform_driver sec_led_driver = {
 	.probe		= sec_led_probe,
 	.remove		= __devexit_p(sec_led_remove),
 	.shutdown	= sec_led_shutdown,
-//	.suspend		= sec_led_suspend,
+//	.suspend	= sec_led_suspend,
 //	.resume		= sec_led_resume,
 	.driver		= {
 		.name	= DRIVER_NAME,
@@ -301,4 +284,3 @@ module_exit(sec_led_exit);
 
 MODULE_DESCRIPTION("SAMSUNG LED driver");
 MODULE_LICENSE("GPL");
-
