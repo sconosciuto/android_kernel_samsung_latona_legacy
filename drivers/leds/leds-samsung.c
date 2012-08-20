@@ -236,13 +236,11 @@ static int __devexit sec_led_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int sec_led_shutdown(struct platform_device *pdev)
+static void sec_led_shutdown(struct platform_device *pdev)
 {
 	gpio_direction_output(OMAP_GPIO_LED_EN1, 0);
 	gpio_direction_output(OMAP_GPIO_LED_EN2, 0);
 	del_timer(&bl_timer);
-
-	return 0;
 }
 
 #if 0
