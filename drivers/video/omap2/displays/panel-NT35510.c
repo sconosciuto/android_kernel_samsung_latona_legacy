@@ -1667,7 +1667,7 @@ static DEFINE_SPINLOCK(aat1402_bl_lock);
 
 static void aat1402_set_brightness(void)
 {
-	printk(KERN_DEBUG" *** aat1402_set_brightness : %d\n", current_intensity);
+	//printk(KERN_DEBUG" *** aat1402_set_brightness : %d\n", current_intensity);
 	//spin_lock_irqsave(&aat1402_bl_lock, flags);
 	//spin_lock(&aat1402_bl_lock);
 
@@ -1675,14 +1675,13 @@ static void aat1402_set_brightness(void)
 	{
 		int orig_intensity = current_intensity;
 
-		if(current_intensity>=108)
-			current_intensity = ((current_intensity-108)*(216-91))/(255-108) + 91;
-		else if(current_intensity>=34)
-			current_intensity = ((current_intensity-34)*(91-29))/(108-34) + 29;
-		else if(current_intensity>=20)
-			current_intensity = ((current_intensity-20)*(29-17))/(34-20) + 17;
+		if(current_panel==5) // if Hitachi 17mA
+		{
+			if(current_intensity > 26)
+				current_intensity = current_intensity - current_intensity/6 + 3; // max current_intensity = 216
 
-		printk(KERN_DEBUG" HITACHI PANEL(%d)! orig_intensity=%d, current_intensity=%d\n", current_panel, orig_intensity, current_intensity);
+			//printk(KERN_DEBUG" HITACHI PANEL(%d)! orig_intensity=%d, current_intensity=%d\n", current_panel, orig_intensity, current_intensity);
+		}
 		
 		spi1writeindex(0xB0);
 		spi1writedata(0x02);
@@ -1696,7 +1695,8 @@ static void aat1402_set_brightness(void)
 		spi1writeindex(0xB0);
 		spi1writedata(0x03);
 
-		current_intensity= orig_intensity;		
+		if(current_panel==5)
+			current_intensity= orig_intensity;		
 	}
 	else if(current_panel==3) // if SMD
 	{
