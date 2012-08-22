@@ -7,7 +7,7 @@
 
 #include "./sec_gain.h"
 
-#define SEC_AUDIO_DEBUG 1
+#define SEC_AUDIO_DEBUG 0
 
 #if SEC_AUDIO_DEBUG
 #define P(format,...)\

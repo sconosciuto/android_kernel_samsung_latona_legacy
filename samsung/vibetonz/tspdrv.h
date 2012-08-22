@@ -26,7 +26,7 @@
 ** =========================================================================
 */
 
-#define VIBE_DEBUG
+//#define VIBE_DEBUG
 
 #ifndef _TSPDRV_H
 #define _TSPDRV_H

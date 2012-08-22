@@ -92,13 +92,13 @@ static int vibrator_value = 0;
 static int set_vibetonz(int timeout)
 {
 	if(!timeout) {
-		printk(KERN_DEBUG "[VIBETONZ] DISABLE\n");
+		DbgOut((KERN_DEBUG "[VIBETONZ] DISABLE\n"));
 		ImmVibeSPI_ForceOut_AmpDisable(0);
 		gpio_set_value(OMAP_GPIO_VIBTONE_EN, GPIO_LEVEL_LOW);
 	}
 	else {
 		ImmVibeSPI_ForceOut_Set(0,1);
-		printk(KERN_DEBUG "[VIBETONZ] ENABLE\n");
+		DbgOut((KERN_DEBUG "[VIBETONZ] ENABLE\n"));
 		gpio_set_value(OMAP_GPIO_VIBTONE_EN, GPIO_LEVEL_HIGH);
 	}
 
@@ -132,7 +132,7 @@ static int get_time_for_vibetonz(struct timed_output_dev *dev)
 
 static void enable_vibetonz_from_user(struct timed_output_dev *dev,int value)
 {
-	printk(KERN_DEBUG "[VIBETONZ] %s : time = %d msec \n",__func__,value);
+	DbgOut((KERN_DEBUG "[VIBETONZ] %s : time = %d msec \n",__func__,value));
 	hrtimer_cancel(&timer);
 	
 	set_vibetonz(value);
