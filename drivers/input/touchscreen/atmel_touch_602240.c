@@ -4845,6 +4845,7 @@ int set_tsp_for_ta_detect(int state)
 	uint8_t *tmp;
 	uint8_t status;
 	uint8_t object_size;
+	static uint8_t tchthr_old = 32;
 
 	if(qt60224_notfound_flag == 1)
 	{
@@ -4884,6 +4885,7 @@ int set_tsp_for_ta_detect(int state)
 
 	if(state)
 	{
+		tchthr_old = config_normal.touchscreen_config.tchthr;
 		config_normal.touchscreen_config.tchthr = 60; //touchscreen_config.tchthr = 70;
 		config_normal.noise_suppression_config.noisethr = 20; //noise_suppression_config.noisethr = 20;		   
 
@@ -4928,7 +4930,7 @@ int set_tsp_for_ta_detect(int state)
 	{
 		fh_err_count = 0;
 		config_normal.touchscreen_config.blen = 16;
-		config_normal.touchscreen_config.tchthr = 32;//touchscreen_config.tchthr = 40;
+		config_normal.touchscreen_config.tchthr = tchthr_old;//touchscreen_config.tchthr = 40;
 		config_normal.noise_suppression_config.noisethr = 27; //noise_suppression_config.noisethr = 30;  
         	config_normal.noise_suppression_config.freq[0] = 29;
         	config_normal.noise_suppression_config.freq[1] = 34;
