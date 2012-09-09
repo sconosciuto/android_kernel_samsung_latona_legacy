@@ -3830,7 +3830,7 @@ void set_specific_keyarray_config(
 		keyarray_config->ysize = 1;
 		keyarray_config->akscfg = 1;
 		keyarray_config->blen = 0; // TODO : 0x10 or 0x20
-		keyarray_config->tchthr = 45; //40;
+		keyarray_config->tchthr = 35; //40;
 		keyarray_config->tchdi = 4; // 4;
         }
         break;
