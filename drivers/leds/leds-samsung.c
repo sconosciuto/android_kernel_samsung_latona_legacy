@@ -28,6 +28,7 @@ struct sec_led_data {
 };
 
 static int bln_state = 0;
+static int pressing = 0;
 
 static int bl_timeout = 1600;
 static struct timer_list bl_timer;
@@ -41,7 +42,7 @@ void bl_timer_callback(unsigned long data)
 
 static void bl_off(struct work_struct *bl_off_work)
 {
-	if(bln_state == 0) {
+	if(bln_state == 0 && pressing == 0) {
 		gpio_set_value(OMAP_GPIO_LED_EN1, 0);
 		gpio_set_value(OMAP_GPIO_LED_EN2, 0);
 	}
@@ -58,6 +59,9 @@ void trigger_touchkey_led(int event)
 {
 	//event: 0-All Lights | 1-Menu Pressed | 2-Back Pressed	| 3- All Key Release
 	if(bl_timeout != 0) {
+
+		pressing = 0;
+
 		switch (event) {
 		case 0:
 			gpio_set_value(OMAP_GPIO_LED_EN1, 1);
@@ -66,6 +70,7 @@ void trigger_touchkey_led(int event)
 			break;
 		case 1:
 		case 2:
+			pressing = 1;
 			gpio_set_value(OMAP_GPIO_LED_EN1, 1);
 			gpio_set_value(OMAP_GPIO_LED_EN2, 1);
 			break;
