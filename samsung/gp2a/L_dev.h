@@ -35,8 +35,8 @@ extern int L_dev_polling_stop( void );
 extern int L_dev_get_op_state(void);
 extern void L_dev_set_op_state(u16);
 extern int L_dev_get_polling_state(void);
-extern unsigned long L_dev_get_polling_interval( void );
-extern void L_dev_set_polling_interval(unsigned long interval);
+extern unsigned int L_dev_get_polling_interval( void );
+extern void L_dev_set_polling_interval(unsigned int interval);
 extern int L_dev_set_timer(u16);
 
 /**************************************************************/

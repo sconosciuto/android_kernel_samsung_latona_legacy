@@ -66,8 +66,8 @@ typedef struct
     int last_brightness_step;
     struct input_dev *inputdevice;
     struct timer_list *light_polling_timer;
-    unsigned long polling_time;
-    unsigned long actual_polling_time;
+    unsigned int polling_time;
+    unsigned int actual_polling_time;
     int cur_polling_state;
     int saved_polling_state;
     u16 lcd_brightness;
@@ -383,7 +383,7 @@ static int L_dev_early_resume(struct early_suspend* handler)
     if(L_dev.cur_polling_state == L_SYSFS_POLLING_OFF && 
        L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
     {
-        debug("[light] L_dev_resume() : L_dev_polling_start() L_dev.polling_time = %d ms \n", L_dev.polling_time);
+        debug("[light] L_dev_resume() : L_dev_polling_start() L_dev.polling_time = %u ms \n", L_dev.polling_time);
         L_dev.saved_polling_state = L_SYSFS_POLLING_OFF;
         L_dev_polling_start();
         L_dev.cur_polling_state = L_SYSFS_POLLING_ON;
@@ -459,7 +459,7 @@ int L_dev_resume(void)
         if(L_dev.cur_polling_state == L_SYSFS_POLLING_OFF && 
            L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
         {
-            debug("[light] L_dev_resume() : L_dev_polling_start() L_dev.polling_time = %d ms \n", L_dev.polling_time);
+            debug("[light] L_dev_resume() : L_dev_polling_start() L_dev.polling_time = %u ms \n", L_dev.polling_time);
             L_dev.saved_polling_state = L_SYSFS_POLLING_OFF;
             L_dev_polling_start();
             L_dev.cur_polling_state = L_SYSFS_POLLING_ON;
@@ -608,7 +608,7 @@ void L_dev_set_op_state(u16 op_state)
 
 int L_dev_polling_start(void)
 {    
-    printk("[light] L_dev_polling_start() L_dev.polling_time = %d ms\n", L_dev.polling_time);
+    printk("[light] L_dev_polling_start() L_dev.polling_time = %u ms\n", L_dev.polling_time);
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
     {
         debug("[light] L_dev_polling_start() ... already POLLING ON!! \n");
@@ -654,12 +654,12 @@ int L_dev_get_polling_state(void)
     return L_dev.saved_polling_state;
 }
 
-unsigned long L_dev_get_polling_interval( void )
+unsigned int L_dev_get_polling_interval( void )
 {
     return L_dev.polling_time;
 }
 
-void L_dev_set_polling_interval(unsigned long interval)
+void L_dev_set_polling_interval(unsigned int interval)
 {
     L_dev.polling_time = interval;
 }
@@ -935,12 +935,12 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
 static ssize_t L_delay_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
     size_t ret;
-    unsigned long interval = L_dev_get_polling_interval();
+    unsigned int interval = L_dev_get_polling_interval();
 
     trace_in();
 
-    debug("   sensor L_interval_show() : %lu", interval );
-    ret = sprintf(buf, "%lu\n", interval);
+    debug("   sensor L_interval_show() : %u", interval );
+    ret = sprintf(buf, "%u\n", interval);
 
     trace_out();
     return ret;
@@ -949,12 +949,12 @@ static ssize_t L_delay_show(struct device *dev, struct device_attribute *attr, c
 static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
     ssize_t ret = strlen(buf);
-    unsigned long delay;
+    unsigned int delay;
     int enabled = 0;
     
     trace_in();
 
-    sscanf(buf, "%lu", &delay);
+    sscanf(buf, "%u", &delay);
     L_dev_set_polling_interval(delay);
 
     if( L_dev_get_polling_state() == L_SYSFS_POLLING_ON)
