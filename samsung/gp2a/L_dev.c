@@ -363,7 +363,7 @@ static int L_dev_early_suspend(struct early_suspend* handler)
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
     {
         debug("[light] L_dev_suspend(void)\n");
-        flush_work(&L_ws);
+        flush_delayed_work(&L_ws);
         cancel_delayed_work_sync(&L_ws);
         L_dev_polling_stop();
         L_dev.saved_polling_state = L_SYSFS_POLLING_ON;
@@ -414,7 +414,7 @@ int L_dev_suspend(void)
         if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
         {
             debug("[light] L_dev_suspend(void)\n");
-            flush_work(&L_ws);
+            flush_delayed_work(&L_ws);
             cancel_delayed_work_sync(&L_ws);
             L_dev_polling_stop();    
             L_dev.saved_polling_state = L_SYSFS_POLLING_ON;
@@ -633,7 +633,7 @@ int L_dev_polling_stop(void)
         return L_dev.saved_polling_state;
     }
 
-    flush_work(&L_ws);
+    flush_delayed_work(&L_ws);
     cancel_delayed_work_sync(&L_ws);
 
     L_dev.saved_polling_state = L_SYSFS_POLLING_OFF;
