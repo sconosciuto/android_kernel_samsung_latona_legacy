@@ -42,7 +42,7 @@ static bool en_touch_log = 0;
 
 /* firmware 2009.09.24 CHJ - end 1/2 */
 
-#define ENABLE_NOISE_TEST_MODE
+//#define ENABLE_NOISE_TEST_MODE
 #define MAX_TOUCH_NUM	5
 #define MAX_TRACKING_ID	MAX_TOUCH_NUM
 #define RETRY_COUNT 10
