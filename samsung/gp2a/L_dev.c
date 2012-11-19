@@ -98,7 +98,6 @@ int L_dev_suspend(void);
 int L_dev_resume(void);
 int L_dev_get_adc_val(u32 *);
 int L_dev_get_illum_lvl(u16 *);
-int get_average_adc_value(unsigned int * data, int count);
 int L_dev_polling_start( void );
 int L_dev_polling_stop( void );
 int L_dev_set_timer(u16);
@@ -575,22 +574,6 @@ static int get_illum_lvl(u32 mV, u16 *illum_lvl)
         }
     }
     return ret;
-}
-
-int get_average_adc_value(unsigned int * data, int count)
-{
-    int i=0, average, min=0xFFFFFFFF, max=0, total=0;
-    for(i=0 ; i<count ; i++)
-    {
-        if(data[i] < min)
-            min=data[i];
-        if(data[i] > max)
-            max=data[i];
-
-        total+=data[i];
-    }
-    average = (total - min -max)/(count -2);
-    return average;
 }
 
 int L_dev_get_op_state(void)
