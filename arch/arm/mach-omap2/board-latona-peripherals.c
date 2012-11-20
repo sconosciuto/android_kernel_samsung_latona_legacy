@@ -448,7 +448,7 @@ static struct regulator_init_data omap_board_vsim = {
 	.consumer_supplies      = &omap_board_vsim_supply,
 };
 
-static struct omap2_hsmmc_info mmc[] __initdata = {
+static struct omap2_hsmmc_info mmc[] = {
 	{
 		.name		= "internal",
 		.mmc		= 2,
