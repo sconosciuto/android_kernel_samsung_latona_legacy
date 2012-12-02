@@ -1086,6 +1086,7 @@ static void plat_hold_wakelock(void *up, int flag)
 static struct omap_onenand_platform_data board_onenand_data = {
 	.cs		= 0,
 	.gpio_irq	= 73,
+	.dma_channel	= -1,
 	.parts		= onenand_partitions,
 	.nr_parts	= ARRAY_SIZE(onenand_partitions),
 	.flags		= ONENAND_SYNC_READWRITE,
