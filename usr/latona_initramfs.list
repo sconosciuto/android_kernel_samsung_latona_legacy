@@ -1,4 +1,4 @@
-cblk1p1 no such device or address
+
 
 dir /dev 755 0 0
 dir /dev/block 755 0 0
