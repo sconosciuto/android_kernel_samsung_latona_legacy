@@ -117,7 +117,7 @@ static struct mtd_partition onenand_partitions[] = {
 	{     
 		.name		= "efs",
 		.offset		= (1954*SZ_256K),
-		.size		= (50*SZ_256K), //1953
+		.size		= (50*SZ_256K), //2003
 	},
 	{       /* The reservoir area is used by Samsung's Block Management Layer (BML)
 	           to map good blocks from this reservoir to bad blocks in user
