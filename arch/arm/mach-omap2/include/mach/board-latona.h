@@ -29,6 +29,8 @@
 #ifndef __BOARD_LATONA_H__
 #define __BOARD_LATONA_H__
 
+#include "board-latona-mtd.h"
+
 extern void ldp_flash_init(void);
 extern void twl4030_bci_battery_init(void);
 

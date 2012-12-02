@@ -836,16 +836,19 @@ CONFIG_PROC_EVENTS=y
 CONFIG_MTD=y
 # CONFIG_MTD_DEBUG is not set
 # CONFIG_MTD_TESTS is not set
-# CONFIG_MTD_CONCAT is not set
-# CONFIG_MTD_PARTITIONS is not set
+CONFIG_MTD_CONCAT=y
+CONFIG_MTD_PARTITIONS=y
+# CONFIG_MTD_REDBOOT_PARTS is not set
+# CONFIG_MTD_CMDLINE_PARTS is not set
+# CONFIG_MTD_AFS_PARTS is not set
+# CONFIG_MTD_AR7_PARTS is not set
 
 #
 # User Modules And Translation Layers
 #
-# CONFIG_MTD_CHAR is not set
-# CONFIG_MTD_BLKDEVS is not set
-# CONFIG_MTD_BLOCK is not set
-# CONFIG_MTD_BLOCK_RO is not set
+CONFIG_MTD_CHAR=y
+CONFIG_MTD_BLKDEVS=y
+CONFIG_MTD_BLOCK=y
 # CONFIG_FTL is not set
 # CONFIG_NFTL is not set
 # CONFIG_INFTL is not set
@@ -898,7 +901,13 @@ CONFIG_MTD_CFI_I2=y
 # CONFIG_MTD_DOC2001PLUS is not set
 # CONFIG_MTD_NAND_IDS is not set
 # CONFIG_MTD_NAND is not set
-# CONFIG_MTD_ONENAND is not set
+CONFIG_MTD_ONENAND=y
+# CONFIG_MTD_ONENAND_VERIFY_WRITE is not set
+# CONFIG_MTD_ONENAND_GENERIC is not set
+CONFIG_MTD_ONENAND_OMAP2=y
+# CONFIG_MTD_ONENAND_OTP is not set
+# CONFIG_MTD_ONENAND_2X_PROGRAM is not set
+# CONFIG_MTD_ONENAND_SIM is not set
 
 #
 # LPDDR flash memory drivers
@@ -2086,6 +2095,7 @@ CONFIG_MISC_FILESYSTEMS=y
 # CONFIG_BEFS_FS is not set
 # CONFIG_BFS_FS is not set
 # CONFIG_EFS_FS is not set
+# CONFIG_YAFFS_FS is not set
 # CONFIG_JFFS2_FS is not set
 # CONFIG_LOGFS is not set
 # CONFIG_CRAMFS is not set

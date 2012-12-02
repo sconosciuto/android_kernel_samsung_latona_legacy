@@ -1083,6 +1083,19 @@ static void plat_hold_wakelock(void *up, int flag)
 		wake_lock_timeout(&uart_lock, 2*HZ);
 }
 
+static struct omap_onenand_platform_data board_onenand_data = {
+	.cs		= 0,
+	.gpio_irq	= 73,
+	.parts		= onenand_partitions,
+	.nr_parts	= ARRAY_SIZE(onenand_partitions),
+	.flags		= ONENAND_SYNC_READWRITE,
+};
+
+static void __init board_onenand_init(void)
+{
+	gpmc_onenand_init(&board_onenand_data);
+}
+
 static struct omap_uart_port_info omap_serial_platform_data[] = {
 	 {
                 .use_dma        = 0,
@@ -1138,6 +1151,8 @@ void __init omap_board_peripherals_init(void)
 	printk("*******board_peripherals_init*****\n");
 	wake_lock_init(&uart_lock, WAKE_LOCK_SUSPEND, "uart_wake_lock");
 	twl4030_get_scripts(&latona_t2scripts_data);
+
+       board_onenand_init();
 
 	omap_i2c_init();
 
