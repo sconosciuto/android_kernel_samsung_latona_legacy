@@ -621,7 +621,7 @@ int L_dev_polling_start(void)
     }
 
     cancel_delayed_work_sync(&L_ws);
-    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.polling_time));
+    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(100));
 
     L_dev.saved_polling_state = L_SYSFS_POLLING_ON;
 
