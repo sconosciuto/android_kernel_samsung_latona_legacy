@@ -28,7 +28,7 @@
 
 #define TWL4030_MADC_CHANNEL_LIGHT        4
 
-#define DEFAULT_POLLING_INTERVAL    500
+#define DEFAULT_POLLING_INTERVAL    1000
 #define TESTMODE_POLLING_INTERVAL   500
 
 #define L_SYSFS_POLLING_ON            0
@@ -69,7 +69,6 @@ typedef struct
     struct input_dev *inputdevice;
     struct timer_list *light_polling_timer;
     unsigned int polling_time;
-    unsigned int actual_polling_time;
     int cur_polling_state;
     int saved_polling_state;
     u16 lcd_brightness;
@@ -311,7 +310,7 @@ int L_dev_init(void)
     }
 #endif
 
-    L_dev.actual_polling_time = DEFAULT_POLLING_INTERVAL;
+    L_dev.polling_time = DEFAULT_POLLING_INTERVAL;
 
 //-------------for test----------------
 #if 0
@@ -622,7 +621,7 @@ int L_dev_polling_start(void)
     }
 
     cancel_delayed_work_sync(&L_ws);
-    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.actual_polling_time));
+    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.polling_time));
 
     L_dev.saved_polling_state = L_SYSFS_POLLING_ON;
 
@@ -773,7 +772,7 @@ static void L_dev_work_func (struct work_struct *unused)
 //       input_sync(L_dev.inputdevice);
     }
 
-    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.actual_polling_time));
+    queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.polling_time));
 
     trace_out() ;
 }
@@ -1017,11 +1016,11 @@ static ssize_t L_testmode_store(struct device *dev, struct device_attribute *att
     L_dev.testmode = value;
     if(value)
     {
-        L_dev.actual_polling_time = TESTMODE_POLLING_INTERVAL;
+        L_dev.polling_time = TESTMODE_POLLING_INTERVAL;
     }
     else
     {
-        L_dev.actual_polling_time = DEFAULT_POLLING_INTERVAL;
+        L_dev.polling_time = DEFAULT_POLLING_INTERVAL;
     }
     
     return count;
