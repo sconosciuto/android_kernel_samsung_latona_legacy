@@ -229,10 +229,10 @@ int g_vibtonzEnable=0;
 int init_module(void)
 {
     int nRet, i;   /* initialized below */
+    struct kobject *vibetonz_kobj;
 
     DbgOut((KERN_INFO "tspdrv: init_module.\n"));
 
-	struct kobject *vibetonz_kobj;
 	vibetonz_kobj = kobject_create_and_add("vibetonz", NULL);
 	if (!vibetonz_kobj)
 			return -ENOMEM;

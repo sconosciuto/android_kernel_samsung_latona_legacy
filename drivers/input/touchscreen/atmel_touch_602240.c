@@ -555,7 +555,7 @@ typedef struct
    uint8_t tchdi;              /*!< Detect integration config           */
    uint8_t average;            /*!< LCMASK Sets the filter length on the prox signal */
    uint16_t rate;               /*!< Sets the rate that prox signal must exceed */
-   uint16_t mvdthr           /*!< movement detection threshold */
+   uint16_t mvdthr;           /*!< movement detection threshold */
 } __packed touch_proximity_t23_config_t;
 
 /*! ==PROCI_ONETOUCHGESTUREPROCESSOR_T24==
@@ -793,7 +793,7 @@ static U16 address_pointer;
 unsigned char g_version=0, g_build = 0, qt60224_notfound_flag=1;
 Atmel_model_type g_model = DEFAULT_MODEL;
 
-all_config_setting config_normal = { "config_normal" , 0 };
+all_config_setting config_normal = { .config_name = "config_normal" , {0} };
 
 uint8_t cal_check_flag = 0u;//20100208
 

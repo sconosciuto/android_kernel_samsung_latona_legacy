@@ -150,7 +150,7 @@ int sdp3430_i2s_startup(struct snd_pcm_substream *substream)
 	  return 0;
 }
 
-int sdp3430_i2s_shutdown(struct snd_pcm_substream *substream)
+void sdp3430_i2s_shutdown(struct snd_pcm_substream *substream)
 {    
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;	
 
@@ -162,8 +162,6 @@ int sdp3430_i2s_shutdown(struct snd_pcm_substream *substream)
 		printk("sdp3430_i2s_shutdown \n");
 		omap_dpll3_errat_wa(1);    
 	}   
-
-	return 0;
 }	
 static struct snd_soc_ops sdp3430_ops = {
 	.startup = sdp3430_i2s_startup,	

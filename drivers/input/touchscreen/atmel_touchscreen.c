@@ -220,7 +220,7 @@ typedef struct
 	int size;
 } dec_input;
 
-static dec_input touch_info[MAX_TOUCH_NUM] = {0};
+static dec_input touch_info[MAX_TOUCH_NUM] = {{0}};
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 static int prev_touch_count = 0;
 #endif
@@ -518,9 +518,10 @@ static ssize_t firmware_update_store(
 		const char *buf, size_t size)
 {
 	char *after;
+	unsigned long value;
 	g_firmware_ret = 2;
 
-	unsigned long value = simple_strtoul(buf, &after, 10);	
+	value = simple_strtoul(buf, &after, 10);	
 	printk(KERN_INFO "[TSP] %s\n", __FUNCTION__);
 
 	if ( value == 1 )	// auto update.
@@ -719,12 +720,11 @@ void handle_multi_touch(uint8_t *atmel_msg)
 {
 	u16 x=0, y=0;
 	unsigned int size ;	// ryun 20100113 
-	static int check_flag=0; // ryun 20100113 	
 	uint8_t touch_message_flag = 0;// ryun 20100208
 	unsigned char one_touch_input_flag=0;
-	unsigned char cal_release_number_of_check=0;
 	int id;
-	int i, touch_count;
+	int i;
+	static int touch_count = 0;
 
 	x = atmel_msg[2];
 	x = x << 2;
@@ -890,8 +890,6 @@ void read_func_for_only_single_touch(struct work_struct *work)
 //	uint8_t ret_val = MESSAGE_READ_FAILED;
 	u16 x=0, y=0;
 	u16 x480, y800, press;
-	int status;
-	u8 family_id;
 //	PRINT_FUNCTION_ENTER;
 	struct touchscreen_t *ts = container_of(work,
 					struct touchscreen_t, tsp_work);
@@ -1101,6 +1099,7 @@ static int __init touchscreen_probe(struct platform_device *pdev)
 	int ret;
 	int error = -1;
 //	u8 data[2] = {0,};
+	struct kobject *ts_kobj;
 
 	printk(KERN_DEBUG "[TSP] touchscreen_probe !! \n");
 	set_touch_irq_gpio_disable();	// ryun 20091203
@@ -1186,7 +1185,6 @@ static int __init touchscreen_probe(struct platform_device *pdev)
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
 // [[ This will create the touchscreen sysfs entry under the /sys directory
-struct kobject *ts_kobj;
 ts_kobj = kobject_create_and_add("touchscreen", NULL);
 	if (!ts_kobj)
 		return -ENOMEM;
@@ -1439,7 +1437,7 @@ static int touchscreen_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static int touchscreen_shutdown(struct platform_device *pdev)
+static void touchscreen_shutdown(struct platform_device *pdev)
 {
 	qt60224_notfound_flag = 1; // to prevent misorder
 
@@ -1457,8 +1455,6 @@ static int touchscreen_shutdown(struct platform_device *pdev)
 	gpio_set_value(OMAP_GPIO_TOUCH_EN, 0);
 
 	printk("[TSP] %s   !!!\n", __func__);
-
-	return 0;
 }
 
 static void touchscreen_device_release(struct device *dev)

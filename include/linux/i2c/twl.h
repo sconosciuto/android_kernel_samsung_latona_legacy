@@ -188,7 +188,7 @@ TWL_CLASS_IS(6030, TWL6030_CLASS_ID)
 int twl_i2c_write_u8(u8 mod_no, u8 val, u8 reg);
 int twl_i2c_read_u8(u8 mod_no, u8 *val, u8 reg);
 #ifdef T2_REG_DUMP //TI HS.Yoon 20101124 for TWL5025/5030 register full dump
-int twl_i2c_read_regdump();
+int twl_i2c_read_regdump(void);
 #endif
 /*
  * Read and write several 8-bit registers at once.

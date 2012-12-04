@@ -667,6 +667,10 @@ void L_dev_set_polling_interval(unsigned long interval)
 static void L_dev_work_func (struct work_struct *unused)
 {
     u32 adc_val;
+    int lux = 11000;
+    int i = 0;
+    int step = 0;
+    int final = 0;
 
     trace_in() ;
 
@@ -691,9 +695,7 @@ static void L_dev_work_func (struct work_struct *unused)
 	//printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d\n", __func__,adc_val);
         
         {
-            int lux = 11000;
-            int i = 0;
-            
+
             for(; adc_vs_lux_table[i+1][0] > 0; i++)
             {
                     // in case the adc value is smaller than 30 lux
@@ -729,9 +731,9 @@ static void L_dev_work_func (struct work_struct *unused)
             }
             else
             {
-                int i = 0;
-                int step = 0;
-                int final = sizeof(brightness_step_table)/sizeof(int);
+                i = 0;
+                step = 0;
+                final = sizeof(brightness_step_table)/sizeof(int);
                 
                 for(; i < final - 1; i++)
                 {

@@ -281,7 +281,7 @@ static int nt35510_panel_probe(struct omap_dss_device *dssdev)
 	//MLCD pin set to OUTPUT.
 	if (gpio_request(OMAP_GPIO_MLCD_RST, "MLCD_RST") < 0) {
 		printk(KERN_ERR "\n FAILED TO REQUEST GPIO %d \n", OMAP_GPIO_MLCD_RST);
-		return;
+		return 1;
 	}
 	gpio_direction_output(OMAP_GPIO_MLCD_RST, 1);
 	printk("[LCD] %s() : current_panel=%d(0:sony, 1:Hitachi(20mA) , 2:Hydis, 3:SMD, 4:Sony(a-Si)), 5:Hitachi(17mA)\n",
@@ -1736,7 +1736,7 @@ static int aat1402_bl_set_intensity(struct backlight_device *bd)
 //	int retry_count=10;
 	
 	if( intensity < 0 || intensity > 255 )
-		return;
+		return 0;
 /*
 	while(atomic_read(&ldi_power_state)==POWER_OFF) 
 	{
@@ -1747,7 +1747,7 @@ static int aat1402_bl_set_intensity(struct backlight_device *bd)
 */	
 	current_intensity = intensity;
 	if(atomic_read(&ldi_power_state)==POWER_OFF) 
-		return;
+		return 0;
 	aat1402_set_brightness();
 
 	return 0;
@@ -1761,10 +1761,11 @@ static struct backlight_ops aat1402_bl_ops = {
 
 static int nt35510_spi_probe(struct spi_device *spi)
 {
-    struct backlight_properties props;
-     int status =0;
-	 int ret;
-		
+	struct backlight_properties props;
+	struct backlight_device *bd;
+	int status =0;
+	int ret;
+
 	printk(KERN_INFO " **** nt35510_spi_probe.\n");
 	nt35510lcd_spi = spi;
 	nt35510lcd_spi->mode = SPI_MODE_0;
@@ -1778,7 +1779,6 @@ static int nt35510_spi_probe(struct spi_device *spi)
 	
 	omap_dss_register_driver(&nt35510_driver);
 //	led_classdev_register(&spi->dev, &nt35510_backlight_led);
-	struct backlight_device *bd;
 	bd = backlight_device_register("omap_bl", &spi->dev, NULL, &aat1402_bl_ops, &props);
 	bd->props.max_brightness = 255;
 	bd->props.brightness = 125;

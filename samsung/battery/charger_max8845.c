@@ -168,7 +168,6 @@ int _check_full_charge_dur_sleep_( void )
     int ret = 0;
     int chg_ing_level = 0;
     int i;
-	int j;
     unsigned char confirm_full = 0x0;
 
     // Check 
@@ -487,7 +486,6 @@ static void cable_detection_work_handler( struct work_struct * work )
                                         cable_detection_work.work );
     int n_usbic_state;
     int count;
-    int ret;
 
     printk("[TA] cable_detection_work_handler start!!!!\n");
 

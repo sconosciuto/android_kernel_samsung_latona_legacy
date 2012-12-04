@@ -205,7 +205,7 @@ static int twl4030_read_kp_matrix_state(struct twl4030_keypad *kp, u16 *state)
 				 KEYP_FULL_CODE_7_0, kp->n_rows);
 
 
-#if defined(CONFIG_INPUT_HARD_RESET_KEY) && (CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
+#if defined(CONFIG_INPUT_HARD_RESET_KEY) && defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 	if((new_state[1] == 2) && home_key_press_status)
 	{
 		printk(KERN_ERR "%s : Force Crash by keypad\n", __func__);

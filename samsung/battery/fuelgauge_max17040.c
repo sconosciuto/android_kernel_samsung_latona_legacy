@@ -417,7 +417,7 @@ static int fuelgauge_resume( struct i2c_client * client )
     buf[1] = ret >> 8;
     buf[2] = 0x1F;
     i2c_write( buf, 3 );
-    printk("%s, set alert threshold 1%\n", __func__);
+    printk("%s, set alert threshold 1%%\n", __func__);
 
     return 0;
 }

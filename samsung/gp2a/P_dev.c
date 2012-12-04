@@ -1285,13 +1285,12 @@ static ssize_t P_delay_show(struct device *dev, struct device_attribute *attr, c
 
 static ssize_t P_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	ssize_t ret = strlen(buf);
-	trace_in();
 
     int enabled = 0;
     u16 power_state, mode;
-   
-    trace_in();
+
+	ssize_t ret = strlen(buf);
+	trace_in();
 
     if( P_dev_get_pwrstate_mode(&power_state, &mode) < 0 )
     {

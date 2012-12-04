@@ -1280,7 +1280,7 @@ static int __devinit battery_probe( struct platform_device *pdev )
 
     struct battery_device_info *di;
 
-    pr_info( "[BM] Battery Probe... bootmode = %d\n\n");
+    pr_info( "[BM] Battery Probe... bootmode = %d\n\n", sec_bootmode);
 
     this_dev = &pdev->dev;
 
