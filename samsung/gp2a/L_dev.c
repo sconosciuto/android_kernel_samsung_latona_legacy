@@ -22,6 +22,8 @@
 #include "L_dev.h"
 #include "common.h"
 
+#define GP2A_DEBUG 0
+
 /*Light sensor device state, LDO state*/
 #define  NOT_OPERATIONAL    0
 #define  OPERATIONAL        1
@@ -375,7 +377,9 @@ static int L_dev_early_suspend(struct early_suspend* handler)
         L_dev.cur_polling_state = L_SYSFS_POLLING_OFF;
     }
 
+#if GP2A_DEBUG
     printk( "%s: Early suspend sleep success!!!\n", __FUNCTION__ ) ;
+#endif
     trace_out() ; 
     return ret;
 }
@@ -394,7 +398,9 @@ static int L_dev_early_resume(struct early_suspend* handler)
         L_dev.cur_polling_state = L_SYSFS_POLLING_ON;
     }
 
+#if GP2A_DEBUG
     printk( "%s: Early suspend wakeup success!!!\n", __FUNCTION__ ) ;
+#endif
     trace_out();
     return ret;
 }
@@ -613,7 +619,9 @@ void L_dev_set_op_state(u16 op_state)
 
 int L_dev_polling_start(void)
 {    
+#if GP2A_DEBUG
     printk("[light] L_dev_polling_start() L_dev.polling_time = %u ms\n", L_dev.polling_time);
+#endif
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
     {
         debug("[light] L_dev_polling_start() ... already POLLING ON!! \n");
@@ -630,7 +638,9 @@ int L_dev_polling_start(void)
 
 int L_dev_polling_stop(void)
 {
+#if GP2A_DEBUG
     printk("[light] L_dev_polling_stop() \n");
+#endif
 
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_OFF)
     {
@@ -760,7 +770,9 @@ static void L_dev_work_func (struct work_struct *unused)
                     //L_dev.last_lux_val = lux;
 #if FILTER
                     L_dev.last_brightness_step = step;
+#if GP2A_DEBUG
                     printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d lux = %d \n", __func__, adc_val, lux);
+#endif
 #endif
                 }
             }

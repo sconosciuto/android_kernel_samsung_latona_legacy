@@ -23,6 +23,8 @@
 #include <linux/power_supply.h>
 #include "common.h"
 
+#define FUEL_DEBUG 0
+
 #if defined(CONFIG_USE_GPIO_I2C)
     #include <plat/i2c-omap-gpio.h>
 #endif    
@@ -401,7 +403,9 @@ static int fuelgauge_suspend( struct i2c_client * client , pm_message_t mesg )
 	    buf[1] = ret >> 8;
 	    buf[2] = alert_th;
 	    i2c_write( buf, 3 );
+#if FUEL_DEBUG
 	    printk("%s, set alert threshold 0x%2x\n", __func__, alert_th);
+#endif
     }
 
     return 0;
@@ -417,7 +421,9 @@ static int fuelgauge_resume( struct i2c_client * client )
     buf[1] = ret >> 8;
     buf[2] = 0x1F;
     i2c_write( buf, 3 );
+#if FUEL_DEBUG
     printk("%s, set alert threshold 1%%\n", __func__);
+#endif
 
     return 0;
 }

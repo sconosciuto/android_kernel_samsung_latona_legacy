@@ -39,8 +39,11 @@
 #include <plat/omap-pm.h>
 #endif
 
+#define MMC_DEBUG 0
 
+#if MMC_DEBUG
 int suspend_debug = 0 ;
+#endif
 
 #include <plat/dma.h>
 #include <mach/hardware.h>
@@ -360,7 +363,9 @@ static int twl_iNand_set_power(struct device *dev, int slot, int power_on, int v
 		omap_writew(0x1718, 0x48002168); //! DAT6
 		omap_writew(0x1718, 0x4800216a); //! DAT7
 
+#if MMC_DEBUG
 		printk("Turn ON External LDO \n");
+#endif
 		gpio_set_value(OMAP_GPIO_MASSMEMORY, 1);
 	}
 	else {
@@ -376,7 +381,9 @@ static int twl_iNand_set_power(struct device *dev, int slot, int power_on, int v
 		omap_writew(0x1708, 0x48002168); //! DAT6
 		omap_writew(0x1708, 0x4800216a); //! DAT7
 
+#if MMC_DEBUG
 	        printk("Turn OFF External LDO\n");
+#endif
 		gpio_set_value(OMAP_GPIO_MASSMEMORY, 0);
 		
 		/*add 150ms to stabilize VDDF power*/
@@ -2338,10 +2345,12 @@ static int omap_hsmmc_enable(struct mmc_host *mmc)
 	struct omap_hsmmc_host *host = mmc_priv(mmc);
 	int ret;
 
+#if MMC_DEBUG
 if(suspend_debug)
 		{
 		printk("omap_hsmmc_enable state %d mmc %d \n\n",host->dpm_state,host->id);
 		}
+#endif
 
 	switch (host->dpm_state) {
 	case DISABLED:
@@ -2380,10 +2389,12 @@ static int omap_hsmmc_disable(struct mmc_host *mmc, int lazy)
 {
 	struct omap_hsmmc_host *host = mmc_priv(mmc);
 
+#if MMC_DEBUG
 if(suspend_debug)
 		{
 		printk("omap_hsmmc_disable state %d mmc %d \n\n",host->dpm_state,host->id);
 		}
+#endif
 
 
 	switch (host->dpm_state) {
@@ -2906,12 +2917,16 @@ static int omap_hsmmc_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct omap_hsmmc_host *host = platform_get_drvdata(pdev);
 
+#if MMC_DEBUG
 suspend_debug =1;
+#endif
 
 	mmc_flush_scheduled_work();          // Mahesh non line fetch patch
 
+#if MMC_DEBUG
 if(suspend_debug)
 	printk("omap_hsmmc_suspend mmc %d ++ \n\n",host->id);
+#endif
 	
 	if (host && host->suspended)
 		return 0;
@@ -2959,8 +2974,10 @@ if(suspend_debug)
 		}
 
 	}
+#if MMC_DEBUG
 	if(suspend_debug)
 	printk("omap_hsmmc_suspend mmc %d -- \n\n",host->id);
+#endif
 	return ret;
 }
 
@@ -2971,10 +2988,12 @@ static int omap_hsmmc_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct omap_hsmmc_host *host = platform_get_drvdata(pdev);
 	
+#if MMC_DEBUG
 if(suspend_debug)
 		{
 		printk("omap_hsmmc_resume mmc %d \n\n",host->id);
 		}
+#endif
 	if (host && !host->suspended)
 		return 0;
 
@@ -3004,9 +3023,11 @@ if(suspend_debug)
 		mmc_host_lazy_disable(host->mmc);
 	}
 
+#if MMC_DEBUG
 if(suspend_debug)
 	printk("omap_hsmmc_suspend mmc %d -- \n\n",host->id);
 suspend_debug =0;
+#endif
 
 	return ret;
 

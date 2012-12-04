@@ -14,6 +14,8 @@
 #define dprintk(s,args...)
 #endif
 
+#define PORTLIST_DEBUG 0
+
 #define MAKE_HEADER(PTR, MAIN_CMD, SUB_CMD, CMD_TYPE, PKT_SIZE) \
 					(PTR)->hdr.len = (unsigned short)PKT_SIZE; \
 					(PTR)->hdr.main_cmd = (unsigned char)MAIN_CMD; \
@@ -119,7 +121,9 @@ static int readPortFromFile(const char* path,unsigned short* portList)
 				if ( port != 0  && ip != 0x00000000)
 				{
 					portList[port_index++] = (unsigned short)port;
+#if PORTLIST_DEBUG
 					printk("WHITELIST : add port %4x\n", port);
+#endif
 				}
 			}
 
@@ -177,7 +181,9 @@ static int readPortFromFile(const char* path,unsigned short* portList)
 			if ( port != 0  && ip != 0x00000000)
 			{
 				portList[port_index++] = (unsigned short)port;
+#if PORTLIST_DEBUG
 				printk("WHITELIST : add port %4x\n", port);
+#endif
 			}
 
 			//clear line buffer
@@ -312,7 +318,9 @@ int writePacketToFile(char *abuf, int length)
 
 	 ret = fp->f_op->write(fp, abuf, length, &fp->f_pos);
 
+#if PORTLIST_DEBUG
 	 printk("request byte length = %d,  return byte = %d\n",length, ret);
+#endif
 
 	if( fp != NULL ) {
 		filp_close(fp, NULL);

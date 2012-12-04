@@ -49,6 +49,8 @@
 
 #include "atmel_touch.h"
 
+#define TSP_DEBUG 0
+
 //#define TEST_TOUCH_KEY_IN_ATMEL
 
 #define  U16 	unsigned short int 
@@ -1111,7 +1113,9 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 
 
 			/* print how many channels we counted */
+#if TSP_DEBUG
 			printk(KERN_DEBUG "[TSP] Flags Counted channels: t:%d a:%d \n", tch_ch, atch_ch);
+#endif
 
 			/* send page up command so we can detect when data updates next time,
 			 * page byte will sit at 1 until we next send F3 command */
@@ -1130,13 +1134,17 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 				{
 					if(qt_time_diff > 500)
 					{
+#if TSP_DEBUG
 						printk(KERN_DEBUG "[TSP] calibration was good\n");
+#endif
 						/* cal was good - don't need to check any more */
 						cal_check_flag = 0;
 						qt_timer_state = 0;
 						qt_time_point = 0;
 
+#if TSP_DEBUG
 						printk(KERN_DEBUG "[TSP] reset acq atchcalst=%d, atchcalsthr=%d\n", config_normal.acquisition_config.atchcalst, config_normal.acquisition_config.atchcalsthr );
+#endif
 							/* Write normal acquisition config back to the chip. */
 							if (write_acquisition_config(config_normal.acquisition_config) != CFG_WRITE_OK)
 						{
@@ -1167,7 +1175,9 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 			}
 			else
 			{
+#if TSP_DEBUG
 				printk(KERN_DEBUG "[TSP] calibration was not decided yet\n");
+#endif
 				/* we cannot confirm if good or bad - we must wait for next touch 
 				 * message to confirm */
 				cal_check_flag = 1;
@@ -2138,7 +2148,9 @@ uint8_t calibrate_chip(void)
 	    config_normal.acquisition_config.atchcalst = 0;
 	    config_normal.acquisition_config.atchcalsthr = 0; 
 	          
+#if TSP_DEBUG
 		printk(KERN_DEBUG "[TSP] reset acq atchcalst=%d, atchcalsthr=%d\n", config_normal.acquisition_config.atchcalst, config_normal.acquisition_config.atchcalsthr );
+#endif
 	        
 		/* Write temporary acquisition config to chip. */
 		if (write_acquisition_config(config_normal.acquisition_config) != CFG_WRITE_OK)

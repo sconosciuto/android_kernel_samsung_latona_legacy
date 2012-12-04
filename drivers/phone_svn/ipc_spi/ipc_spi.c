@@ -29,6 +29,7 @@
 //#define RAW_TX_RX_LENGTH_DUMP
 //#define RFS_TX_RX_LENGTH_DUMP
 
+#define IPC_DEBUG 0
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -3078,8 +3079,10 @@ RETRY_WAIT_SEM :
 
 			stop_spi_sync_count = 0;
 			while (stop_spi_sync) {
+#if IPC_DEBUG
 				if (!(stop_spi_sync_count % 100))
 					printk("[SPI STOP], stop_spi_sync : %d\n", stop_spi_sync);
+#endif
 				stop_spi_sync_count++;
 				
 				if (stop_spi_sync_count > 5000)
@@ -3740,14 +3743,18 @@ static int ipc_spi_remove( struct spi_device *spi )
 
 static int ipc_spi_suspend(struct platform_device *pdev, pm_message_t state)
 {
+#if IPC_DEBUG
 	printk("IPC_SPI SUSPEND\n");
+#endif
 	stop_spi_sync = 1;
 	return 0;
 }
 
 static int ipc_spi_resume(struct platform_device *pdev)
 {
+#if IPC_DEBUG
 	printk("IPC_SPI RESUME\n");
+#endif
 	stop_spi_sync = 0;
 	return 0;
 }

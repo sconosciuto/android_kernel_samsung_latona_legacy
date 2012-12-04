@@ -22,6 +22,8 @@
 
 #define DSS_SUBSYS_NAME "CORE"
 
+#define DSS_DEBUG 0
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/clk.h>
@@ -823,7 +825,9 @@ static int omap_dss_suspend(struct platform_device *pdev, pm_message_t state)
 #ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
 	static int flag = 1;
 	DSSDBG("suspend %d\n", state.event);
+#if DSS_DEBUG
           printk(" ***************suspending dss **************\n");
+#endif
 
 	if(flag == 1)
 	{
@@ -837,7 +841,9 @@ static int omap_dss_suspend(struct platform_device *pdev, pm_message_t state)
 static int omap_dss_resume(struct platform_device *pdev)
 {
 	DSSDBG("resume\n");
+#if DSS_DEBUG
   printk(" ***************resuming  dss **************\n");
+#endif
 
 	return dss_resume_all_devices();
 }

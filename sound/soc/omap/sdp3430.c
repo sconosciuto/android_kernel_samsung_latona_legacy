@@ -46,6 +46,8 @@
 #include "omap-mcbsp.h"
 #include "omap-pcm.h"
 
+#define SDP_DEBUG 0
+
 /* TWL4030 PMBR1 Register */
 #ifdef CONFIG_SND_SOC_MAX97000
 #include "../codecs/max97000.h"
@@ -142,7 +144,9 @@ int sdp3430_i2s_startup(struct snd_pcm_substream *substream)
 	  	  * updated with with a new workaround without impacting mp3 usecase.          
 	  	  */              
 
+#if SDP_DEBUG
               printk("sdp3430_i2s_startup  \n");
+#endif
 	  	
 	  	omap_dpll3_errat_wa(0);  
 	  }      
@@ -159,7 +163,9 @@ void sdp3430_i2s_shutdown(struct snd_pcm_substream *substream)
 
 	if (!snd_hw_latency) {   
 		omap_pm_set_max_mpu_wakeup_lat(&substream->latency_pm_qos_req, -1);     
+#if SDP_DEBUG 
 		printk("sdp3430_i2s_shutdown \n");
+#endif
 		omap_dpll3_errat_wa(1);    
 	}   
 }	

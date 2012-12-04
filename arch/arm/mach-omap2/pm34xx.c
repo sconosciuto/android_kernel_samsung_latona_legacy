@@ -85,6 +85,7 @@ static u16 pm34xx_errata;
 #define OMAP3430_CM_SLEEPDEP_PER_EN_MPU                (1 << 1)
 #define OMAP3430_CM_SLEEPDEP_PER_EN_IVA2               (1 << 2)
 
+#define PM_DEBUG 0
   
 /* Secure ram save size - store the defaults */
 static struct omap3_secure_copy_data secure_copy_data = {
@@ -798,7 +799,9 @@ static void omap3_gpio_wkst_log(void )
 		return;	//Not a GPIO wakeup
 	}
 
+#if PM_DEBUG
 	printk("[PM_GPIO_WAKEUP] PM_WKST_WKUP = 0x%x\n", wkst);
+#endif
 
 
 READ_ROUTINE:
@@ -818,6 +821,7 @@ READ_ROUTINE:
 	{
 		value = omap_readl(address_ptr);
 
+#if PM_DEBUG
 		if( (value & 0x80000000) ) // Wakeup event check for the higher part
 		{
 			printk("[PM_GPIO_WAKEUP] ADDRESS = 0x%x (HIGH) - 0x%x\n", address_ptr, value);
@@ -827,6 +831,7 @@ READ_ROUTINE:
 		{
 			printk("[PM_GPIO_WAKEUP] ADDRESS = 0x%x (LOW) - 0x%x\n", address_ptr, value);
 		}		
+#endif
 	}
 
 	if(address_ptr < PAD_CONFIG_X_2_BASE_ADDRESS)
@@ -855,6 +860,7 @@ static int omap3_pm_suspend(void)
 	if (wakeup_timer_seconds || wakeup_timer_milliseconds)
 		omap2_pm_wakeup_on_timer(wakeup_timer_seconds,
 					 wakeup_timer_milliseconds);
+#if PM_DEBUG
 #if 1 // Sleep debugging
 	printk("[omap3_pm_suspend] CM_IDLEST1_CORE : %x\n", omap_readl(0x48004A20));
 	printk("[omap3_pm_suspend] CM_IDLEST3_CORE : %x\n", omap_readl(0x48004A28));
@@ -864,6 +870,7 @@ static int omap3_pm_suspend(void)
 	printk("[omap3_pm_suspend] CM_IDLEST_PER : %x\n", omap_readl(0x48005020));
 	printk("[omap3_pm_suspend] CM_IDLEST_NEON : %x\n", omap_readl(0x48005320));
 	printk("[omap3_pm_suspend] CM_IDLEST_USBHOST : %x\n", omap_readl(0x48005420));
+#endif
 #endif
 
 pm_suspend_reenter: // SAMSUNG egkim
@@ -919,6 +926,7 @@ pm_suspend_reenter: // SAMSUNG egkim
 		if ( !ret_val )
     		goto pm_suspend_reenter;
 	} else{
+#if PM_DEBUG
 	    #if 1
 	    printk("wkup_st = 0x%04x\n" , wkup_st);
 	    #else
@@ -927,6 +935,7 @@ pm_suspend_reenter: // SAMSUNG egkim
 			omap_readl(0x49054018), omap_readl(0x49056018), omap_readl(0x49058018));
 		printk("GPIO1 wakeupenable : 0x%08x\n", omap_readl(0x48310020));
 		#endif
+#endif
 	}
 	
     gptimer_wakeup_count = 0;

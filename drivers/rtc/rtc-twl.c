@@ -29,6 +29,8 @@
 #include <linux/interrupt.h>
 #include <linux/i2c/twl.h>
 
+#define RTC_DEBUG 0
+
 #define WORKQUEUE_RTC
 
 #ifdef WORKQUEUE_RTC
@@ -419,7 +421,9 @@ unsigned long events = 0;
 	int res;
 	u8 rd_reg;
 
+#if RTC_DEBUG
 printk("rtc_interrupt_bottom_half \n");
+#endif
 	
  void* rtc =(void *) rtc_ins.rtc ;
 
@@ -492,7 +496,9 @@ static irqreturn_t twl_rtc_interrupt(int irq, void *rtc)
 #endif
 
 #ifdef WORKQUEUE_RTC
+#if RTC_DEBUG
 printk("twl_rtc_interrupt rtc ");
+#endif
 rtc_ins.rtc =(int)rtc ;
 INIT_WORK(&task, rtc_interrupt_bottom_half);
 

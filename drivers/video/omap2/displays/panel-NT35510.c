@@ -46,6 +46,7 @@
 #include  <../../../../arch/arm/mach-omap2/mux.h>
 #include <linux/i2c/twl.h>
 
+#define PANEL_DEBUG 0
 
 
 #define LCD_XRES		480
@@ -374,7 +375,9 @@ static void nt35510_panel_disable(struct omap_dss_device *dssdev)
 
 static int nt35510_panel_suspend(struct omap_dss_device *dssdev)
 {
+#if PANEL_DEBUG
 	printk(KERN_INFO " **** nt35510_panel_suspend\n");
+#endif
 	spi_setup(nt35510lcd_spi);
 
 	gpio_set_value(OMAP_GPIO_LCD_EN_SET, GPIO_LEVEL_LOW);
@@ -393,7 +396,9 @@ static int nt35510_panel_suspend(struct omap_dss_device *dssdev)
 
 static int nt35510_panel_resume(struct omap_dss_device *dssdev)
 {
+#if PANEL_DEBUG
 	printk(KERN_INFO " **** nt35510_panel_resume\n");
+#endif
 
 	spi_setup(nt35510lcd_spi);
     
@@ -490,7 +495,9 @@ static void spi1write(u8 index, u8 data)
 
 void nt35510_ldi_poweron_hitachi(void)
 {
+#if PANEL_DEBUG
 	printk("[LCD] %s() + \n", __func__);
+#endif
 
 	spi1writeindex(0x36);
 	spi1writedata(0x00); 
@@ -519,13 +526,17 @@ void nt35510_ldi_poweron_hitachi(void)
 	spi1writeindex(0x29);	
 	
 	atomic_set(&ldi_power_state, POWER_ON);
+#if PANEL_DEBUG
 	printk("[LCD] %s() -\n", __func__);
+#endif
 }
 
 
 void nt35510_ldi_poweroff_hitachi(void)
 {
+#if PANEL_DEBUG
 	printk(" **** %s\n", __func__);
+#endif
 	
 	// SLEEP IN
 	spi1writeindex(0x10);	// SEQ_SLEEP IN_SET
@@ -546,7 +557,9 @@ void nt35510_ldi_poweroff_hitachi(void)
 
 void nt35510_ldi_poweron_sony(void)
 {
+#if PANEL_DEBUG
 	printk("[LCD] %s() + \n", __func__);
+#endif
 	msleep(145);
 
 	spi1writeindex(0x3A);
@@ -599,13 +612,17 @@ void nt35510_ldi_poweron_sony(void)
 	spi1writeindex(0x29);	
 
 	atomic_set(&ldi_power_state, POWER_ON);
+#if PANEL_DEBUG
 	printk("[LCD] %s() -\n", __func__);
+#endif
 }
 
 
 void nt35510_ldi_poweroff_sony(void)
 {
+#if PANEL_DEBUG
 	printk(" **** %s\n", __func__);
+#endif
 
 	// Display Off
 	spi1writeindex(0x28);	// SEQ_DISPOFF_SET
@@ -623,7 +640,9 @@ void nt35510_ldi_poweroff_sony(void)
 
 void nt35510_ldi_poweron_sony_a_si(void)
 {
+#if PANEL_DEBUG
 	printk("[LCD] %s() + \n", __func__);
+#endif
 	msleep(145);
 	spi1writeindex(0x3A);
 	spi1writedata(0x77);
@@ -891,13 +910,17 @@ void nt35510_ldi_poweron_sony_a_si(void)
 	spi1writeindex(0x29);
 
 	atomic_set(&ldi_power_state, POWER_ON);
+#if PANEL_DEBUG
 	printk("[LCD] %s() -\n", __func__);
+#endif
 }
 
 
 void nt35510_ldi_poweroff_sony_a_si(void)
 {
+#if PANEL_DEBUG
 	printk(" **** %s\n", __func__);
+#endif
 		
 	// Display Off
 	spi1writeindex(0x28);	// SEQ_DISPOFF_SET
@@ -1027,7 +1050,9 @@ void lcd_hydis_gamma2(void)
 
 void nt35510_ldi_poweron_hydis(void)
 {
+#if PANEL_DEBUG
 	printk("[LCD] %s() + \n", __func__);
+#endif
 		
 // [[ User Set
 	/* Test Commands */
@@ -1240,12 +1265,16 @@ void nt35510_ldi_poweron_hydis(void)
 	spi1writeindex(0x29);	// DISPON
 
 	atomic_set(&ldi_power_state, POWER_ON);	
+#if PANEL_DEBUG
 	printk("[LCD] %s() -- \n", __func__);
+#endif
 }
 
 void nt35510_ldi_poweroff_hydis(void)
 {
+#if PANEL_DEBUG
 	printk(" **** %s\n", __func__);
+#endif
 		
 	// Display Off
 	spi1writeindex(0x28);	// SEQ_DISPOFF_SET
@@ -1266,7 +1295,9 @@ void nt35510_ldi_poweroff_hydis(void)
 
 void nt35510_ldi_poweron_smd(void)
 {
+#if PANEL_DEBUG
 	printk("[LCD] %s() + \n", __func__);
+#endif
 
 	/* Initializing Sequence */
 	spi1writeindex(0x36);
@@ -1497,12 +1528,16 @@ void nt35510_ldi_poweron_smd(void)
 		spi1writeindex(0x29);	
 
 	atomic_set(&ldi_power_state, POWER_ON);
+#if PANEL_DEBUG
 	printk("[LCD] %s() -- \n", __func__);
+#endif
 }
 
 void nt35510_ldi_poweroff_smd(void)
 {
+#if PANEL_DEBUG
 	printk(" **** %s\n", __func__);
+#endif
 		
 	//Display Off Command
 	spi1writeindex(0x28);
@@ -1517,7 +1552,9 @@ void nt35510_ldi_poweroff_smd(void)
 void nt35510_lcd_LDO_on(void)
 {
 	int ret;
+#if PANEL_DEBUG
 	printk("+++ %s\n", __func__);
+#endif
 //	twl_i2c_read_regdump();
 #if 1	
 	ret = regulator_enable( vaux3 ); //VAUX3 - 1.8V
@@ -1539,13 +1576,17 @@ void nt35510_lcd_LDO_on(void)
 	if(current_panel == 3) // if SMD
 		msleep(50);
 	
+#if PANEL_DEBUG
 	printk("--- %s\n", __func__);
+#endif
 }
 
 void nt35510_lcd_LDO_off(void)
 {
 	int ret;
+#if PANEL_DEBUG
 	printk("+++ %s\n", __func__);
+#endif
 
 	// Reset Release (reset = L)
 	gpio_set_value(OMAP_GPIO_MLCD_RST, GPIO_LEVEL_LOW); 
@@ -1566,7 +1607,9 @@ void nt35510_lcd_LDO_off(void)
 	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x00, 0x1F);
 #endif	
 
+#if PANEL_DEBUG
 	printk("--- %s\n", __func__);
+#endif
 }
 
 void nt35510_lcd_poweroff(void)

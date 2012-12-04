@@ -762,10 +762,14 @@ static int twl4030_set_reg_from_file(struct snd_soc_codec *codec, char* filename
 		for(i=0 ; i<nIndex ; i++){
 			if(mode == GAIN_INIT_MUSIC_SPK){
 				music_spk_gain[i] = regFromFile[i].val;
+#if SEC_AUDIO_DEBUG
 				printk("music_spk_gain : index %d, value 0x%x\n", i,  music_spk_gain[i]);
+#endif
 			}else if(mode == GAIN_INIT_MUSIC_EAR){
 				music_ear_gain[i] = regFromFile[i].val;
+#if SEC_AUDIO_DEBUG
 				printk("music_ear_gain : index %d, value 0x%x\n", i,  music_ear_gain[i]);
+#endif
 			}
 		}
 	#endif

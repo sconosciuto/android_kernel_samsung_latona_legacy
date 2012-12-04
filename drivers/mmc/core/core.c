@@ -39,6 +39,8 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+#define MMC_DEBUG 0
+
 static struct workqueue_struct *workqueue;
 static struct wake_lock mmc_delayed_work_wake_lock;
 
@@ -377,22 +379,28 @@ int mmc_host_enable(struct mmc_host *host)
 {
 	if (!(host->caps & MMC_CAP_DISABLE))
 		{
+#if MMC_DEBUG
 		 if(suspend_debug)
                     	printk("enable MMC_CAP_DISABLE\n");
+#endif
     	return 0;
 		}
 
 	if (host->en_dis_recurs)
 			{
+#if MMC_DEBUG
 		     if(suspend_debug)
                      	printk("enable en_dis_recurs\n");
+#endif
   		return 0;
 			}
 
 	if (host->nesting_cnt++)
 		{
+#if MMC_DEBUG
 		     if(suspend_debug)
                        	printk("enable NC %d\n",host->nesting_cnt);
+#endif
 		return 0;
 		}
 
@@ -400,8 +408,10 @@ int mmc_host_enable(struct mmc_host *host)
 
 	if (host->enabled)
 		{
+#if MMC_DEBUG
 		  if(suspend_debug)
                       	printk("enable  enabled\n");
+#endif
 
 		  return 0;
 		}
@@ -462,29 +472,37 @@ int mmc_host_disable(struct mmc_host *host)
 
 	if (!(host->caps & MMC_CAP_DISABLE))
 		{
+#if MMC_DEBUG
 		     if(suspend_debug)
                      	printk("Disable MMC_CAP_DISABLE\n");
+#endif
 		return 0;
 		}
 
 	if (host->en_dis_recurs)
 		{
+#if MMC_DEBUG
 		     if(suspend_debug)
                      	printk("Disable en_dis_recurs\n");
+#endif
 		return 0;
 		}
 
 	if (--host->nesting_cnt)
 				{
+#if MMC_DEBUG
 		     if(suspend_debug)
                       	printk("disable NC %d\n",host->nesting_cnt);
+#endif
 		return 0;
 		}
 
 	if (!host->enabled)
 	{
+#if MMC_DEBUG
 		    if(suspend_debug)
                          	printk("disables  enabled\n");
+#endif
 		return 0;
 		}
 
@@ -1697,8 +1715,10 @@ int mmc_suspend_host(struct mmc_host *host)
 
 	if (!err && !(host->pm_flags & MMC_PM_KEEP_POWER))
 		{
+#if MMC_DEBUG
 		if(suspend_debug)
 			printk("P off  mmc \n");
+#endif
 
 		mmc_power_off(host);
 

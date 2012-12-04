@@ -24,6 +24,8 @@
 #define NOISY_DEBUG
 #endif
 
+#define SIPC_DEBUG 0
+
 #include "pdp.h"
 #include "sipc.h"
 #include "sipc4.h"
@@ -1764,7 +1766,9 @@ int sipc_whitelist(struct sipc *si, const char *buf, size_t count)
 	int r;
 	struct ringbuf *rb;
 
+#if SIPC_DEBUG
 	printk("[%s]\n",__func__);
+#endif
 
 	if (factory_test_force_sleep) {
 		printk("[%s]factory test\n",__func__);	

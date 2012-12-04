@@ -13,6 +13,8 @@
  *
  */
 
+#define TSP_DEBUG 0
+
 #define RESERVED_T0                               0u
 #define RESERVED_T1                               1u
 #define DEBUG_DELTAS_T2                           2u
@@ -490,14 +492,18 @@ extern unsigned char g_version, g_build, qt60224_notfound_flag;
 
 void disable_tsp_irq(void)
 {
+#if TSP_DEBUG
 	printk(KERN_DEBUG "[TSP] disabling tsp irq and flushing workqueue\n");
+#endif
 	disable_irq(tsp.irq);
 	flush_workqueue(tsp_wq);
 }
 
 void enable_tsp_irq(void)
 {
+#if TSP_DEBUG
 	printk(KERN_DEBUG "[TSP] enabling tsp irq\n");
+#endif
 	enable_irq(tsp.irq);	
 }
 
@@ -764,12 +770,16 @@ void handle_multi_touch(uint8_t *atmel_msg)
 
 				if( (touch_state & 0x10) == 0x10 )
 				{
+#if TSP_DEBUG
 					printk(KERN_DEBUG "[TSP] reset and calibration success\n");
+#endif
 					resume_success = 1;
 				}
 				else
 				{
+#if TSP_DEBUG
 					printk("[TSP] retry to reset\n");
+#endif
 					resume_success = 0;
 					do_reset = 1;
 				}
@@ -869,7 +879,9 @@ void handle_multi_touch(uint8_t *atmel_msg)
 	{
 		if((atmel_msg[1]&0x10) == 0x10)
 		{
+#if TSP_DEBUG
 			printk(KERN_DEBUG "[TSP] The device is calibrating...\n");
+#endif
 			cal_check_flag = 1;
 			qt_timer_state = 0;
 			qt_time_point = 0;
@@ -1026,8 +1038,10 @@ void read_func_for_multi_touch(struct work_struct *work)
 		case SPT_SELFTEST_T25:
 		case SPT_CTECONFIG_T28:
 		default:
+#if TSP_DEBUG
 			printk(KERN_DEBUG "[TSP] 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n", atmel_msg[0], atmel_msg[1],atmel_msg[2], 
 				    atmel_msg[3], atmel_msg[4],atmel_msg[5], atmel_msg[6], atmel_msg[7], atmel_msg[8]);
+#endif
 			break;
 	};
 
@@ -1399,7 +1413,9 @@ extern int atmel_resume(void);
 
 static int touchscreen_suspend(struct platform_device *pdev, pm_message_t state)
 {
+#if TSP_DEBUG
 	printk(KERN_DEBUG "[TSP] touchscreen_suspend : touch power off\n");
+#endif
 	atmel_suspend();
 	if (menu_button == 1)
 	{
@@ -1428,7 +1444,9 @@ static int touchscreen_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int touchscreen_resume(struct platform_device *pdev)
 {
+#if TSP_DEBUG
 	printk(KERN_DEBUG "[TSP] touchscreen_resume : touch power on\n");
+#endif
 
 	atmel_resume();
 //	initialize_multi_touch(); 

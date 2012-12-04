@@ -32,6 +32,8 @@
 #include <plat/dma.h>
 #include "omap-pcm.h"
 
+#define PCM_DEBUG 0
+
 //#define SYED_WA
 #ifdef SYED_WA
 struct file *pDumpFile = NULL;
@@ -266,11 +268,13 @@ static int omap_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	if (cmd == SNDRV_PCM_TRIGGER_START || cmd == SNDRV_PCM_TRIGGER_RESUME || cmd == SNDRV_PCM_TRIGGER_PAUSE_RELEASE) {
 		prtd->period_index = 0;
 		/* Configure McBSP internal buffer usage */
+#if PCM_DEBUG
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		{
 			printk("play start\n");
 		}else
 			printk("rec start\n");
+#endif
 
 		if (dma_data->set_threshold)
 			dma_data->set_threshold(substream);
@@ -286,10 +290,12 @@ static int omap_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 			while (omap_get_dma_active_status(prtd->dma_ch))
 				omap_stop_dma(prtd->dma_ch);
 		}
+#if PCM_DEBUG
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			printk("play stop\n");		
 		else
 			printk("rec stop\n");
+#endif
 	} else {
 		ret = -EINVAL;
 	}
@@ -339,7 +345,9 @@ static int omap_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct omap_runtime_data *prtd;
 	int ret;
+#if PCM_DEBUG
 	printk("pcm open\n");
+#endif
 	snd_soc_set_runtime_hwparams(substream, &omap_pcm_hardware);
 
 	/* Ensure that buffer size is a multiple of period size */
@@ -387,7 +395,9 @@ out:
 static int omap_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+#if PCM_DEBUG
 	printk("pcm_close\n");
+#endif
 	kfree(runtime->private_data);
 
 #ifdef SYED_WA

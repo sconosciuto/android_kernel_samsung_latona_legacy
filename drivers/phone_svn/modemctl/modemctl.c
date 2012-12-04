@@ -18,7 +18,9 @@
  * 02110-1301 USA
  */
 
-#define DEBUG
+//#define DEBUG
+
+#define MODEM_DEBUG 0
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -397,7 +399,9 @@ static int pda_on(struct modemctl *mc)
 	}
 
 	gpio_set_value(mc->gpio_pda_active, 1);
+#if MODEM_DEBUG
 	printk( "PDA ACTIVE HIGH : %d(%d)\n", gpio_get_value( mc->gpio_pda_active ), mc->gpio_pda_active );
+#endif
 
 	return 0;
 }
@@ -411,20 +415,26 @@ static int pda_off(struct modemctl *mc)
 	}
 
 	gpio_set_value(mc->gpio_pda_active, 0);
+#if MODEM_DEBUG
 	printk( "PDA ACTIVE LOW  : %d(%d)\n", gpio_get_value( mc->gpio_pda_active ), mc->gpio_pda_active );
+#endif
 
 	return 0;
 }
 
 static int modem_get_active(struct modemctl *mc)
 {
+#if MODEM_DEBUG
 	dev_err(mc->dev, "%s\n", __func__);
+#endif
 	if(!mc->gpio_phone_active || !mc->gpio_cp_reset)
 		return -ENXIO;
 
+#if MODEM_DEBUG
 	dev_err(mc->dev, "cp %d phone %d\n",
 			gpio_get_value(mc->gpio_cp_reset),
 			gpio_get_value(mc->gpio_phone_active));
+#endif
 
 	if(gpio_get_value(mc->gpio_cp_reset))
 		return !!gpio_get_value(mc->gpio_phone_active);
@@ -577,7 +587,9 @@ static void mc_work(struct work_struct *work)
 		return;
 	}
 
+#if MODEM_DEBUG
 	dev_err( mc->dev, "PHONE ACTIVE: %d\n", r );
+#endif
 
 	envs[ 0 ] = cpdump_int ? "MAILBOX=cp_exit" : "MAILBOX=cp_reset";
 
