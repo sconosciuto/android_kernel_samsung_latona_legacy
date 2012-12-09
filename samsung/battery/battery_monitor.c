@@ -1313,7 +1313,7 @@ static int __devinit battery_probe( struct platform_device *pdev )
     device_config = pdev->dev.platform_data;
 
     INIT_WORK(&di->battery_monitor_work, battery_monitor_work_handler);
-    INIT_DELAYED_WORK(&di->battery_polling_work, battery_polling_work);
+    INIT_DELAYED_WORK_DEFERRABLE(&di->battery_polling_work, battery_polling_work);
 
     di->initial_check_count = INIT_CHECK_COUNT;
 
