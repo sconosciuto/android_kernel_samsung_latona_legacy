@@ -98,7 +98,8 @@ struct battery_device_config
 struct battery_device_info 
 {
     struct device *dev;
-    struct delayed_work battery_monitor_work;
+    struct work_struct battery_monitor_work;
+    struct delayed_work battery_polling_work;
 
     // LDO USB1V5, USB1V9 have a same unique operating mode.
     struct regulator *usb1v5;
@@ -109,6 +110,8 @@ struct battery_device_info
     struct power_supply sec_battery;
     struct power_supply sec_ac;
     struct power_supply sec_usb;    
+
+    int initial_check_count; 
 };
 
 static struct device *this_dev;
@@ -452,8 +455,8 @@ int _charger_state_change_( int category, int value, bool is_sleep )
 
         pdev = to_platform_device( this_dev );
         di = platform_get_drvdata( pdev );
-        cancel_delayed_work( &di->battery_monitor_work );
-        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, 5 * HZ ); 
+        cancel_delayed_work( &di->battery_polling_work );
+        queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_polling_work, 5 * HZ);
 
         power_supply_changed( &di->sec_battery );
         power_supply_changed( &di->sec_ac );
@@ -1004,7 +1007,7 @@ static void battery_monitor_work_handler( struct work_struct *work )
     int charge_current_adc;
     struct battery_device_info *di = container_of( work,
                             struct battery_device_info,
-                            battery_monitor_work.work );
+                            battery_monitor_work );
 
     #if 0
     pr_info( "[BM] battery monitor [Level:%d, ADC:%d, TEMP.:%d, cable: %d] \n",\
@@ -1092,7 +1095,7 @@ static void battery_monitor_work_handler( struct work_struct *work )
     power_supply_changed( &di->sec_ac );
     power_supply_changed( &di->sec_usb );
 
-    queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, sec_bci.battery.monitor_duration * HZ);
+    wake_unlock(&sec_bc_wakelock);
 
 }
 
@@ -1130,6 +1133,22 @@ static int battery_monitor_fleeting_wakeup_handler( unsigned long arg )
         request_gptimer12( &batt_gptimer_12 );
 
     return ret;
+}
+
+static void battery_polling_work(struct work_struct *work)
+{
+    struct battery_device_info *di = container_of( work,
+                                                   struct battery_device_info,
+                                                   battery_polling_work.work );
+
+    wake_lock(&sec_bc_wakelock);
+    queue_work(sec_bci.sec_battery_workq, &di->battery_monitor_work);
+
+    if (di->initial_check_count) {
+        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_polling_work, HZ );
+        di->initial_check_count--;
+    } else
+        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_polling_work, sec_bci.battery.monitor_duration * HZ );
 }
 
 // ------------------------------------------------------------------------- // 
@@ -1293,7 +1312,10 @@ static int __devinit battery_probe( struct platform_device *pdev )
     di->dev = &pdev->dev;
     device_config = pdev->dev.platform_data;
 
-    INIT_DELAYED_WORK( &di->battery_monitor_work, battery_monitor_work_handler );
+    INIT_WORK(&di->battery_monitor_work, battery_monitor_work_handler);
+    INIT_DELAYED_WORK(&di->battery_polling_work, battery_polling_work);
+
+    di->initial_check_count = INIT_CHECK_COUNT;
 
     /*Create power supplies*/
     di->sec_battery.name = "battery";
@@ -1357,6 +1379,7 @@ static int __devinit battery_probe( struct platform_device *pdev )
     }
 
 
+
 #ifdef _OMS_FEATURES_
     // Create battery sysfs files for sharing battery information with platform.
     ret = sysfs_create_file( &di->sec_battery.dev->kobj, &batt_vol_toolow.attr );
@@ -1401,11 +1424,11 @@ static int __devinit battery_probe( struct platform_device *pdev )
 
 #ifdef CONFIG_SEC_BATTERY_USE_RECOVERY_MODE
     if (likely(recovery_mode == 0))
-        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ/2 );
+        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_polling_work, HZ/2 );
     else
-        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, 0 );
+        queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_polling_work, 0 );
 #else
-    queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ/2 );
+    queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_polling_work, HZ/2 );
 #endif
     sec_bci.ready = true;
 
@@ -1442,7 +1465,7 @@ static int __devexit battery_remove( struct platform_device *pdev )
     struct battery_device_info *di = platform_get_drvdata( pdev );
 
     flush_scheduled_work();
-    cancel_delayed_work( &di->battery_monitor_work );
+    cancel_delayed_work( &di->battery_polling_work );
 
     power_supply_unregister( &di->sec_ac );
     power_supply_unregister( &di->sec_battery );
@@ -1464,7 +1487,8 @@ static int battery_suspend( struct platform_device *pdev,
 {
     struct battery_device_info *di = platform_get_drvdata( pdev );
 
-    cancel_delayed_work( &di->battery_monitor_work );
+    cancel_work_sync(&di->battery_monitor_work);
+    cancel_delayed_work(&di->battery_polling_work);
 
 	sec_bci.charger.rechg_count = 0;
 
@@ -1499,6 +1523,8 @@ static int battery_suspend( struct platform_device *pdev,
 static int battery_resume( struct platform_device *pdev )
 {
     struct battery_device_info *di = platform_get_drvdata( pdev );
+
+    wake_lock(&sec_bc_wakelock);
 
     if ( batt_gptimer_12.active )
     {
@@ -1540,15 +1566,14 @@ static int battery_resume( struct platform_device *pdev )
             break;
     }
 
-	wake_lock_timeout( &sec_bc_wakelock , HZ * 3 );
-
     power_supply_changed( &di->sec_battery );
     power_supply_changed( &di->sec_ac );
     power_supply_changed( &di->sec_usb );
 
     sec_bci.charger.full_charge_dur_sleep = 0x0;
-    
-    queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ/2 );
+
+    queue_work(sec_bci.sec_battery_workq, &di->battery_monitor_work);
+    queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_polling_work, sec_bci.battery.monitor_duration * HZ); 
 
     return 0;
 }
