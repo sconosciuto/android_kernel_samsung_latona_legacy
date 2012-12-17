@@ -193,9 +193,6 @@ extern unsigned long long sched_clock( void );
 
 extern u32 sec_bootmode;
 
-static bool boot_complete = false;
-static int boot_monitor_count = 0;
-
 int stop_temperature_overheat = CHARGE_STOP_TEMPERATURE_MAX;
 int recover_temperature_overheat = CHARGE_RECOVER_TEMPERATURE_MAX;
 
@@ -233,20 +230,6 @@ static ssize_t store_batt_monitor_temp(struct kobject *kobj,
     sec_bci.battery.support_monitor_temp = flag;
     sec_bci.battery.support_monitor_timeout = flag;
     sec_bci.battery.support_monitor_full = flag;
-
-    return size;
-}
-
-static ssize_t store_batt_boot_complete(struct kobject *kobj,
-                    struct kobj_attribute *attr,
-                    const char *buf, size_t size)
-{
-    int flag;
-
-    sscanf( buf, "%d", &flag );
-    pr_info("[BM] boot complete flag:%d, buf:%s, size:%d\n",flag, buf, size);
-
-    boot_complete = true;
 
     return size;
 }
@@ -308,7 +291,6 @@ static struct kobj_attribute batt_sysfs_testmode[] = {
     __ATTR( batt_capacity, 0644, show_batt_capacity, NULL ),
     __ATTR( batt_fuelgauge_reset, 0644, do_batt_fuelgauge_reset, store_batt_fuelgauge_reset ),
     __ATTR( batt_monitor_temp, 0664, show_batt_monitor_temp, store_batt_monitor_temp ),
-    __ATTR( batt_boot_complete, 0664, NULL, store_batt_boot_complete ),
     __ATTR( fg_soc, 0644, show_batt_capacity, NULL ),
     __ATTR( batt_temp_check, 0644, show_batt_temp_check, NULL ),
     __ATTR( batt_full_check, 0644, show_batt_full_check, NULL ),    
@@ -765,9 +747,6 @@ static int get_battery_level_ptg( void )
     if ( sec_bci.charger.charge_status == POWER_SUPPLY_STATUS_FULL )
 		value = 100;
 
-    if(!boot_complete && value <= 0)
-        value = 1;
-
 #ifdef CONFIG_SAMSUNG_BATTERY_TESTMODE
     return 60;
 #else
@@ -1017,12 +996,6 @@ static void battery_monitor_work_handler( struct work_struct *work )
         sec_bci.charger.cable_status );
     #endif
 
-    boot_monitor_count++;
-    if(!boot_complete && boot_monitor_count >= 2)
-    {
-        pr_info("[BM] boot complete \n");
-        boot_complete = true;
-    }
 	if(sec_bci.charger.rechg_count > 0)
 		sec_bci.charger.rechg_count--;
 
@@ -1081,11 +1054,10 @@ static void battery_monitor_work_handler( struct work_struct *work )
     }
 
     #if 1
-    pr_info( "[BM] monitor BATT.(%d%%, %dmV, %d*, count=%d, charging=%d)\n",
+    pr_info( "[BM] monitor BATT.(%d%%, %dmV, %d*, charging=%d)\n",
             sec_bci.battery.battery_level_ptg,
             sec_bci.battery.battery_level_vol,
             sec_bci.battery.battery_temp,
-            boot_monitor_count,
             sec_bci.charger.is_charging
             );
     #endif
