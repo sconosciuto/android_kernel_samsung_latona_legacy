@@ -116,6 +116,7 @@ struct battery_device_info
 
 static struct device *this_dev;
 static struct wake_lock sec_bc_wakelock;
+static struct wake_lock sec_bc_wakelock_charge;
 
 static SEC_battery_charger_info sec_bci;
 static struct battery_device_config *device_config;
@@ -1520,6 +1521,9 @@ static int battery_resume( struct platform_device *pdev )
         release_gptimer12( &batt_gptimer_12 );
     }
 
+    if(sec_bci.charger.is_charging)
+        wake_lock_timeout(&sec_bc_wakelock_charge, 3*HZ);
+
     switch ( sec_bci.charger.full_charge_dur_sleep )
     {
         case 0x1 : 
@@ -1613,6 +1617,7 @@ static int __init battery_init( void )
     }
 
     wake_lock_init( &sec_bc_wakelock, WAKE_LOCK_SUSPEND, "samsung-battery" );
+    wake_lock_init( &sec_bc_wakelock_charge, WAKE_LOCK_SUSPEND, "samsung-battery-charge" );
 
     ret = platform_driver_register( &battery_platform_driver );
 
