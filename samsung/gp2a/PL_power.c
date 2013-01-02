@@ -8,8 +8,6 @@
 #include <plat/mux.h>
 #include "common.h"
 
-#define GP2A_DEBUG 0
-
 #define DRIVER_NAME "secPLSensorPower"
 
 static atomic_t reference_count;
@@ -73,9 +71,7 @@ int pl_sensor_power_on( void )
 
 	atomic_inc(&reference_count);
 
-#if GP2A_DEBUG
-	printk("[PSENSOR]: %s: REF COUNT:%d\n", __func__, atomic_read(&reference_count));
-#endif
+	debug("[PSENSOR]: %s: REF COUNT:%d\n", __func__, atomic_read(&reference_count));
 
 	trace_out();
 	return ret;
@@ -97,10 +93,8 @@ int pl_sensor_power_off( void )
 	{
 		return 0;
 	}
-	
-#if GP2A_DEBUG
-	printk("[PSENSOR]: %s: REF COUNT:%d\n", __func__, atomic_read(&reference_count));
-#endif
+
+	debug("[PSENSOR]: %s: REF COUNT:%d\n", __func__, atomic_read(&reference_count));
 
 	if(atomic_read(&reference_count) == 0)
 	{	

@@ -22,8 +22,6 @@
 #include "L_dev.h"
 #include "common.h"
 
-#define GP2A_DEBUG 0
-
 /*Light sensor device state, LDO state*/
 #define  NOT_OPERATIONAL    0
 #define  OPERATIONAL        1
@@ -31,15 +29,9 @@
 #define TWL4030_MADC_CHANNEL_LIGHT        4
 
 #define DEFAULT_POLLING_INTERVAL    1000
-#define TESTMODE_POLLING_INTERVAL   500
 
 #define L_SYSFS_POLLING_ON            0
 #define L_SYSFS_POLLING_OFF            1
-
-#define L_SYSFS_START_POLLING        2
-#define L_SYSFS_STOP_POLLING        3
-
-#define L_SYSFS_ERROR              -1
 
 // To turn on USB block in PMIC
 #define VSEL_VINTANA2_2V75  0x01
@@ -53,16 +45,14 @@
  * ldo_state: operational or not operational
  * ch_request: madc_chrequest structure to get the converted value for a 
  * particular channel from MADC in TWL4030
- * table: pointer to light sensor's illuminance level table
  */
-typedef struct 
+typedef struct
 {
     struct mutex lock;
     struct res_handle *t2_vintana2_ldo;
     u16 device_state;
     u16 ldo_state;
     struct twl4030_madc_request ch_request;
-    u32 *table;
     int last_adc_val;
     int last_lux_val;
 #if FILTER
@@ -73,12 +63,9 @@ typedef struct
     unsigned int polling_time;
     int cur_polling_state;
     int saved_polling_state;
-    u16 lcd_brightness;
-    int testmode;
 #ifdef CONFIG_HAS_EARLYSUSPEND
     struct early_suspend early_suspend;
 #endif
-    u16 op_state;
 } L_device_t;
 
 /**************************************************************/
@@ -91,29 +78,24 @@ extern int pl_usb_power_off(void);
 extern int pl_madc_power_on(void);
 extern int pl_madc_power_off(void);
 
-void L_dev_sync_mech_init(void); 
+void L_dev_sync_mech_init(void);
 int L_dev_init(void);
 int L_dev_exit(void);
 int L_dev_suspend(void);
 int L_dev_resume(void);
 int L_dev_get_adc_val(u32 *);
-int L_dev_get_illum_lvl(u16 *);
 int L_dev_polling_start( void );
 int L_dev_polling_stop( void );
-int L_dev_set_timer(u16);
 
 /**************************************************************/
 /*static functions*/
 /**************************************************************/
-static int get_illum_lvl(u32, u16 *);
-
 
 int L_sysfs_init(struct input_dev *);
 void L_sysfs_exit(struct input_dev *);
 
 
 static struct workqueue_struct *light_wq;
-static int force_report = 1;
 
 /*Light sensor device structure*/
 static L_device_t L_dev =
@@ -130,7 +112,6 @@ static L_device_t L_dev =
         .func_cb=NULL,
         .rbuf[TWL4030_MADC_CHANNEL_LIGHT] = 0,
     },
-    .table = L_table,
     .last_adc_val = 0,
     .last_lux_val = 0,
 #if FILTER
@@ -140,10 +121,7 @@ static L_device_t L_dev =
     .polling_time = DEFAULT_POLLING_INTERVAL,
     .cur_polling_state = L_SYSFS_POLLING_OFF,
     .saved_polling_state = L_SYSFS_POLLING_OFF,
-    .lcd_brightness = 5,
-    .testmode = 0,
-    .op_state = 0,
-};    
+};
 
 static int adc_vs_lux_table[][3] = {
     { 2, 8 },
@@ -200,16 +178,6 @@ static void L_dev_usb_connection_state_change_handler(const int onoff)
 {
     printk("[PLSENSOR][%s] PARAM = [%d]\n", __func__, onoff);
     usb_connection_state = onoff;
-#if 0
-    if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
-    {
-        cancel_delayed_work_sync(&L_ws);
-        if(onoff)
-            queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(2000));
-        else
-            queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(7000));
-    }
-#endif
 }
 #endif
 
@@ -218,11 +186,11 @@ void L_dev_sync_mech_init(void)
     mutex_init(&(L_dev.lock));
 }
 
-static int turn_resources_on_for_adc()
+static int turn_resources_on_for_adc(void)
 {
     int ret;
-    u8 val = 0; 
-    
+    u8 val = 0;
+
     ret = twl_i2c_read_u8( TWL4030_MODULE_MADC, &val, TWL4030_MADC_CTRL1 );
     val &= ~TWL4030_MADC_MADCON;
     ret = twl_i2c_write_u8( TWL4030_MODULE_MADC, val, TWL4030_MADC_CTRL1 );
@@ -231,7 +199,7 @@ static int turn_resources_on_for_adc()
     ret = twl_i2c_read_u8( TWL4030_MODULE_MADC, &val, TWL4030_MADC_CTRL1 );
     val |= TWL4030_MADC_MADCON;
     ret = twl_i2c_write_u8( TWL4030_MODULE_MADC, val, TWL4030_MADC_CTRL1 );
-    
+
     pl_usb_power_on();
     twl_i2c_write_u8( TWL4030_MODULE_PM_RECEIVER, 0x14, 0x7D );
     twl_i2c_write_u8( TWL4030_MODULE_PM_RECEIVER, 0x0, 0x7E );
@@ -239,10 +207,10 @@ static int turn_resources_on_for_adc()
     val |= 0x1;
     twl_i2c_write_u8( TWL4030_MODULE_USB, val, 0xFE );
 
-    twl_i2c_write_u8( TWL4030_MODULE_PM_RECEIVER, VSEL_VINTANA2_2V75, TWL4030_VINTANA2_DEDICATED );    
+    twl_i2c_write_u8( TWL4030_MODULE_PM_RECEIVER, VSEL_VINTANA2_2V75, TWL4030_VINTANA2_DEDICATED );
     twl_i2c_write_u8( TWL4030_MODULE_PM_RECEIVER, 0x20, TWL4030_VINTANA2_DEV_GRP );
     twl_i2c_write_u8( TWL4030_MODULE_USB, SEL_MADC_MCPC, CARKIT_ANA_CTRL );
-    
+
     return pl_usb_power_off();
 }
 
@@ -256,18 +224,18 @@ int L_dev_init(void)
 
     trace_in();
 
-    LOCK();   
+    LOCK();
 
     debug("[light] power up VINTANA2....\n");
     if (ret != twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,0x01, 0x46))
         return -EIO;
     if (ret != twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,0x20, 0x43))
         return -EIO;
-        
+
     L_dev.device_state = OPERATIONAL;
     L_dev.ldo_state = OPERATIONAL;
 
-    UNLOCK();     
+    UNLOCK();
 
     if( !(L_dev.inputdevice = input_allocate_device()) )
     {
@@ -278,12 +246,9 @@ int L_dev_init(void)
 
     set_bit(EV_ABS, L_dev.inputdevice->evbit);
     input_set_capability(L_dev.inputdevice, EV_ABS, ABS_MISC);
-    input_set_capability(L_dev.inputdevice, EV_ABS, ABS_BRAKE);     /* status */
-    input_set_capability(L_dev.inputdevice, EV_ABS, ABS_X);         /* wake */
-    input_set_capability(L_dev.inputdevice, EV_ABS, ABS_THROTTLE);     /* enabled/delay */
-    L_dev.inputdevice->name = "light_sensor"; 
+    L_dev.inputdevice->name = "light_sensor";
 
-    if((ret = input_register_device(L_dev.inputdevice))<0) 
+    if((ret = input_register_device(L_dev.inputdevice))<0)
     {
         failed(2);
     }
@@ -291,7 +256,7 @@ int L_dev_init(void)
     {
         L_sysfs_init(L_dev.inputdevice);
     }
-    
+
     INIT_DELAYED_WORK(&L_ws, (void (*) (struct work_struct *))L_dev_work_func);
     light_wq = create_singlethread_workqueue("light_wq");
     if (!light_wq)
@@ -312,20 +277,6 @@ int L_dev_init(void)
 #endif
 
     L_dev.polling_time = DEFAULT_POLLING_INTERVAL;
-
-//-------------for test----------------
-#if 0
-
-        if( L_dev_polling_start() != 0 )
-        {
-            printk(KERN_ERR "L_dev_polling_start() : fail!! \n");
-            ret = 0;
-        }
-        turn_resources_on_for_adc();
-
-        pl_sensor_power_on();
-#endif	
-//-------------for test----------------
 
     trace_out();
 
@@ -348,7 +299,7 @@ int L_dev_exit(void)
     L_dev.ldo_state = NOT_OPERATIONAL;
 
     L_sysfs_exit(L_dev.inputdevice);
-    input_unregister_device(L_dev.inputdevice);    
+    input_unregister_device(L_dev.inputdevice);
 
     if (light_wq)
         destroy_workqueue(light_wq);
@@ -376,10 +327,8 @@ static int L_dev_early_suspend(struct early_suspend* handler)
         L_dev.cur_polling_state = L_SYSFS_POLLING_OFF;
     }
 
-#if GP2A_DEBUG
-    printk( "%s: Early suspend sleep success!!!\n", __FUNCTION__ ) ;
-#endif
-    trace_out() ; 
+    debug( "%s: Early suspend sleep success!!!\n", __FUNCTION__ ) ;
+    trace_out();
     return ret;
 }
 
@@ -397,9 +346,7 @@ static int L_dev_early_resume(struct early_suspend* handler)
         L_dev.cur_polling_state = L_SYSFS_POLLING_ON;
     }
 
-#if GP2A_DEBUG
-    printk( "%s: Early suspend wakeup success!!!\n", __FUNCTION__ ) ;
-#endif
+    debug( "%s: Early suspend wakeup success!!!\n", __FUNCTION__ ) ;
     trace_out();
     return ret;
 }
@@ -411,7 +358,7 @@ int L_dev_suspend(void)
 
     trace_in();
 
-    LOCK();   
+    LOCK();
 
     if( L_dev.device_state == NOT_OPERATIONAL )
     {
@@ -426,7 +373,7 @@ int L_dev_suspend(void)
             debug("[light] L_dev_suspend(void)\n");
             flush_delayed_work(&L_ws);
             cancel_delayed_work_sync(&L_ws);
-            L_dev_polling_stop();    
+            L_dev_polling_stop();
             L_dev.saved_polling_state = L_SYSFS_POLLING_ON;
             L_dev.cur_polling_state = L_SYSFS_POLLING_OFF;
         }
@@ -434,7 +381,7 @@ int L_dev_suspend(void)
         L_dev.ldo_state = NOT_OPERATIONAL;
     }
 
-    UNLOCK(); 
+    UNLOCK();
 
     trace_out();
 
@@ -446,7 +393,7 @@ int L_dev_resume(void)
     int ret = 0;
 
     trace_in();
-    LOCK();   
+    LOCK();
 
     if( L_dev.device_state == NOT_OPERATIONAL )
     {
@@ -460,7 +407,6 @@ int L_dev_resume(void)
         if (ret != twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,0x41, 0x46))
             return -EIO;
         if (ret != twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,0x20, 0x43))
-        
             return -EIO;
         L_dev.ldo_state = OPERATIONAL;
 
@@ -477,7 +423,7 @@ int L_dev_resume(void)
 #endif
     }
 
-    UNLOCK(); 
+    UNLOCK();
     trace_out();
 
     return ret;
@@ -487,7 +433,7 @@ int L_dev_get_adc_val(u32 *adc_val)
 {
     int ret = 0;
 
-    LOCK();   
+    LOCK();
 
     if( L_dev.device_state == NOT_OPERATIONAL )
     {
@@ -502,109 +448,21 @@ int L_dev_get_adc_val(u32 *adc_val)
     else if((ret = twl4030_madc_conversion(&(L_dev.ch_request))) < 0 ) // ryun
     {
         failed(3);
-    }    
+    }
     else
     {
         *adc_val = L_dev.ch_request.rbuf[TWL4030_MADC_CHANNEL_LIGHT];
         debug("ADC data: %u", L_dev.ch_request.rbuf[TWL4030_MADC_CHANNEL_LIGHT]);
     }
 
-    UNLOCK(); 
+    UNLOCK();
 
     return ret;
-}
-
-int L_dev_get_illum_lvl(u16 *illum_lvl)
-{
-    int ret = 0;
-    u32 mV;
-
-    trace_in();
-
-    LOCK();   
-
-    if( L_dev.device_state == NOT_OPERATIONAL )
-    {
-        failed(1);
-        ret = -1;
-    }
-    else if ( L_dev.ldo_state == NOT_OPERATIONAL )
-    {
-        failed(2);
-        ret = -1;
-    }
-    else if((ret = twl4030_madc_conversion(&(L_dev.ch_request))) < 0 )
-    {
-        failed(3);
-    } 
-    else
-    {
-        mV = L_dev.ch_request.rbuf[TWL4030_MADC_CHANNEL_LIGHT];
-        debug("   ADC data: %u", L_dev.ch_request.rbuf[TWL4030_MADC_CHANNEL_LIGHT]);
-        if( get_illum_lvl(mV, illum_lvl) < 0 )
-        {
-            failed(4);
-            ret = -1;
-        }
-    }
-
-    UNLOCK(); 
-    trace_out();
-    return ret;
-}    
-
-static int get_illum_lvl(u32 mV, u16 *illum_lvl)
-{
-    int ret = -1;
-    int i = L_LVL1_mV_IDX, j;
-
-    if( L_dev.table[L_NO_OF_LVLS_IDX] > L_MAX_LVLS )
-    {
-        failed(1);
-        return -1;
-    }
-
-    for( i = L_LVL1_mV_IDX, j = 1; j <= L_dev.table[L_NO_OF_LVLS_IDX]; i += L_LVL_mV_INCR, j++ )
-    {
-        if( (mV >= L_dev.table[i]) && (mV <= L_dev.table[i+1]) )
-        {
-            *illum_lvl = L_dev.table[i-3];
-            ret = 0;
-            break;
-        }
-    }
-    return ret;
-}
-
-int L_dev_get_op_state(void)
-{
-    return (int)(L_dev.op_state);
-}
-
-void L_dev_set_op_state(u16 op_state)
-{
-    switch(op_state)
-    {
-        case 0: // OFF
-            if(L_dev.op_state == 1) // if ON state
-            {
-                L_dev.op_state = 0;
-            }
-            break;
-        case 1: // ON
-            L_dev.op_state = 1;
-            break;
-        case 2: // ON LOCK for factory test
-            L_dev.op_state = 2;
-            break;
-    }
 }
 
 int L_dev_polling_start(void)
-{    
-#if GP2A_DEBUG
-    printk("[light] L_dev_polling_start() L_dev.polling_time = %u ms\n", L_dev.polling_time);
-#endif
+{
+    debug("[light] L_dev_polling_start() L_dev.polling_time = %u ms\n", L_dev.polling_time);
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_ON)
     {
         debug("[light] L_dev_polling_start() ... already POLLING ON!! \n");
@@ -621,9 +479,7 @@ int L_dev_polling_start(void)
 
 int L_dev_polling_stop(void)
 {
-#if GP2A_DEBUG
-    printk("[light] L_dev_polling_stop() \n");
-#endif
+    debug("[light] L_dev_polling_stop() \n");
 
     if(L_dev.saved_polling_state == L_SYSFS_POLLING_OFF)
     {
@@ -648,7 +504,7 @@ int L_dev_get_polling_state(void)
     {
         return L_SYSFS_POLLING_OFF;
     }
-    
+
     return L_dev.saved_polling_state;
 }
 
@@ -677,94 +533,59 @@ static void L_dev_work_func (struct work_struct *unused)
     debug("[light] L_dev_work_func(), L_dev.saved_polling_state= %d\n", L_dev.saved_polling_state);
     if( !(L_dev.saved_polling_state) )
     {
-        int adc_level = 0;
-#ifdef CONFIG_FSA9480_NOTIFY_USB_CONNECTION_STATE        
-        int adc_index = usb_connection_state ? 1 : 2;   /* To choose adc value from the table according the state of USB connection */
-#else
-        int adc_index = 2;
-#endif
-
         if( L_dev_get_adc_val(&adc_val) < 0 )
         {
             failed(1);
             debug( "[light] Failed!!!\n" );
         }
-        
+
         L_dev.last_adc_val = adc_val;
-	//for test		
-	//printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d\n", __func__,adc_val);
-        
+
+        for(; adc_vs_lux_table[i+1][0] > 0; i++)
         {
-
-            for(; adc_vs_lux_table[i+1][0] > 0; i++)
+            // in case the adc value is smaller than 30 lux
+            if(adc_val < adc_vs_lux_table[i][1])
             {
-                    // in case the adc value is smaller than 30 lux
-                    if(adc_val < adc_vs_lux_table[i][1])
-                    {
-                            lux = adc_vs_lux_table[i][0] * adc_val / adc_vs_lux_table[i][1];
-                            break;
-                    }
-
-                    if(adc_val >= adc_vs_lux_table[i][1] && adc_val < adc_vs_lux_table[i+1][1])
-                    {
-                            lux = (adc_vs_lux_table[i+1][0] - adc_vs_lux_table[i][0]) /
-                                  (adc_vs_lux_table[i+1][1] - adc_vs_lux_table[i][1]) * 
-                                  (adc_val - adc_vs_lux_table[i][1]) +
-                                  adc_vs_lux_table[i][0];
-                            break;
-                    }
+                lux = adc_vs_lux_table[i][0] * adc_val / adc_vs_lux_table[i][1];
+                break;
             }
 
-	     L_dev.last_lux_val = lux;
-		 
-            if(L_dev.testmode == 1)
+            if(adc_val >= adc_vs_lux_table[i][1] && adc_val < adc_vs_lux_table[i+1][1])
             {
-                input_report_abs(L_dev.inputdevice, ABS_MISC, lux);
-                input_sync(L_dev.inputdevice);
-		  //L_dev.last_lux_val = lux;
-            }
-            else if(L_dev.testmode == 2)
-            {
-                input_report_abs(L_dev.inputdevice, ABS_MISC, lux+200);
-                input_sync(L_dev.inputdevice);
-		 //L_dev.last_lux_val = lux;		
-            }
-            else
-            {
-#if FILTER
-                i = 0;
-                step = 0;
-                final = sizeof(brightness_step_table)/sizeof(int);
-
-                for(; i < final - 1; i++)
-                {
-                    if((lux >= brightness_step_table[i]) && (lux < brightness_step_table[i+1]))
-                    {
-                        step = i;
-                        break;
-                    }
-                }
-                
-                if(L_dev.last_brightness_step != step)
-#endif
-                {
-                    input_report_abs(L_dev.inputdevice, ABS_MISC, lux);
-                    input_sync(L_dev.inputdevice);
-                    //L_dev.last_lux_val = lux;
-#if FILTER
-                    L_dev.last_brightness_step = step;
-#if GP2A_DEBUG
-                    printk(KERN_DEBUG "LSENSOR: %s: adc_val=%d lux = %d \n", __func__, adc_val, lux);
-#endif
-#endif
-                }
+                lux = (adc_vs_lux_table[i+1][0] - adc_vs_lux_table[i][0]) /
+                      (adc_vs_lux_table[i+1][1] - adc_vs_lux_table[i][1]) * 
+                      (adc_val - adc_vs_lux_table[i][1]) +
+                      adc_vs_lux_table[i][0];
+                break;
             }
         }
 
+        L_dev.last_lux_val = lux;
 
-// If you want see adc value in test mode, please uncomment the below two lines
-//       input_report_abs(L_dev.inputdevice, ABS_X, adc_val);
-//       input_sync(L_dev.inputdevice);
+#if FILTER
+        i = 0;
+        step = 0;
+        final = sizeof(brightness_step_table)/sizeof(int);
+
+        for(; i < final - 1; i++)
+        {
+            if((lux >= brightness_step_table[i]) && (lux < brightness_step_table[i+1]))
+            {
+                step = i;
+                break;
+            }
+        }
+        
+        if(L_dev.last_brightness_step != step) 
+#endif
+        {
+            input_report_abs(L_dev.inputdevice, ABS_MISC, lux);
+            input_sync(L_dev.inputdevice);
+#if FILTER
+            L_dev.last_brightness_step = step;
+#endif
+        }
+
     }
 
     queue_delayed_work(light_wq, &L_ws, msecs_to_jiffies(L_dev.polling_time));
@@ -772,27 +593,20 @@ static void L_dev_work_func (struct work_struct *unused)
     trace_out() ;
 }
 
-
 static ssize_t L_delay_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t L_enable_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
-static ssize_t L_wake_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t L_data_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t L_status_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t L_adc_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t L_lux_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t L_testmode_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t L_testmode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
+
 
 static DEVICE_ATTR(poll_delay, S_IRUGO|S_IWUSR|S_IWGRP, L_delay_show, L_delay_store);
 static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR|S_IWGRP, L_enable_show, L_enable_store);
-static DEVICE_ATTR(wake, S_IWUSR|S_IWGRP, NULL, L_wake_store);
 static DEVICE_ATTR(data, S_IRUGO, L_data_show, NULL);
-static DEVICE_ATTR(status, S_IRUGO, L_status_show, NULL);
 static DEVICE_ATTR(adc, S_IRUGO, L_adc_show, NULL);
 static DEVICE_ATTR(lux, S_IRUGO, L_lux_show, NULL);
-static DEVICE_ATTR(testmode, 0664, L_testmode_show, L_testmode_store);
 
 static struct attribute *light_attributes[] = {
     &dev_attr_adc.attr,
@@ -803,12 +617,9 @@ static struct attribute *light_attributes[] = {
 static struct attribute *L_attributes[] = {
     &dev_attr_poll_delay.attr,
     &dev_attr_enable.attr,
-    &dev_attr_wake.attr,
     &dev_attr_data.attr,
-    &dev_attr_status.attr,
     &dev_attr_adc.attr,
     &dev_attr_lux.attr,
-    &dev_attr_testmode.attr,
     NULL
 };
 
@@ -832,13 +643,13 @@ int L_sysfs_init(struct input_dev * input_data)
     }
     ret = sensors_register(light_sensor_device, NULL, light_attributes, "light_sensor");
     if(ret) {
-    	printk(KERN_ERR "%s: cound not register accelerometer sensor device(%d).\n", __func__, ret);
+        printk(KERN_ERR "%s: cound not register accelerometer sensor device(%d).\n", __func__, ret);
     }
 
     trace_out();
 
     return ret;
-}    
+}
 
 void L_sysfs_exit(struct input_dev * input_data)
 {
@@ -883,7 +694,7 @@ static ssize_t L_enable_show(struct device *dev, struct device_attribute *attr, 
     trace_in();
     
     power_state = L_dev_get_polling_state();
-    
+
     if( power_state == L_SYSFS_POLLING_ON)
     {
         enabled = 1;
@@ -891,8 +702,8 @@ static ssize_t L_enable_show(struct device *dev, struct device_attribute *attr, 
     else
     {
         enabled = 0;
-    }        
-        
+    }
+
     debug("   enabled: %d", enabled);
 
     ret = sprintf(buf, "%d\n",enabled);
@@ -907,8 +718,8 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
     int enabled = 0;
 
     trace_in();
-    
-    if (strncmp(buf, "0", 1) == 0 ) 
+
+    if (strncmp(buf, "0", 1) == 0 )
     {
         if( L_dev_polling_stop() != 1 )
         {
@@ -918,7 +729,7 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
         pl_madc_power_off();
         pl_sensor_power_off();
     }
-    else if(strncmp(buf, "1", 1) == 0 ) 
+    else if(strncmp(buf, "1", 1) == 0 )
     {
         enabled = 1;
         if( L_dev_polling_start() != 0 )
@@ -929,10 +740,7 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
         turn_resources_on_for_adc();
 
         pl_sensor_power_on();
-        force_report = 1;
     }
-        
-    input_report_abs(L_dev.inputdevice, ABS_THROTTLE, (enabled<<16) | L_dev_get_polling_interval());
     
     trace_out();
     return ret;
@@ -970,59 +778,12 @@ static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, 
     else
     {
         enabled = 0;
-    }        
-    
+    }
     debug("   sensor L_interval_store() : %lu sec", delay );
-
-    input_report_abs(L_dev.inputdevice, ABS_THROTTLE, (enabled<<16) | delay);
 
     trace_out();
 
     return ret;
 
-}
-
-static ssize_t L_wake_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-    static int cnt = 1;
-
-    input_report_abs(L_dev.inputdevice, ABS_X, cnt++);
-
-    return count;
-}
-
-static ssize_t L_status_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    unsigned long flags;
-    int status;
-
-    spin_lock_irqsave(&L_dev.inputdevice->event_lock, flags);
-
-    status = L_dev.inputdevice->abs[ABS_BRAKE];
-
-    spin_unlock_irqrestore(&L_dev.inputdevice->event_lock, flags);
-
-    return sprintf(buf, "%d\n", status);
-}
-
-static ssize_t L_testmode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-    int value = simple_strtoul(buf, NULL,10);
-    L_dev.testmode = value;
-    if(value)
-    {
-        L_dev.polling_time = TESTMODE_POLLING_INTERVAL;
-    }
-    else
-    {
-        L_dev.polling_time = DEFAULT_POLLING_INTERVAL;
-    }
-    
-    return count;
-}
-
-static ssize_t L_testmode_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    return sprintf(buf, "%d\n", L_dev.testmode);
 }
 

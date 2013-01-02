@@ -119,23 +119,19 @@ int P_dev_init(void);
 int P_dev_exit(void);
 
 int P_dev_shutdown(void);
-int P_dev_return_to_op(void);
 
 int P_dev_reset(void);
 
 void P_dev_check_wakeup_src(void);
 
-int P_dev_get_mode(u16 *);
 int P_dev_get_pwrstate_mode(u16 *, u16 *);
 
 void P_dev_work_func(struct work_struct *);
 
 int P_dev_powerup_set_op_mode(u16);
 
-int P_dev_get_prox_output(u16 *);
-
-extern int pl_sensor_power_on();
-extern int pl_sensor_power_off();
+extern int pl_sensor_power_on(void);
+extern int pl_sensor_power_off(void);
 
 /*static functions*/
 static void enable_int(void);
@@ -261,9 +257,6 @@ int P_dev_init()
 	
     set_bit(EV_ABS, P_dev.inputdevice->evbit);
     input_set_capability(P_dev.inputdevice, EV_ABS, ABS_DISTANCE);
-    input_set_capability(P_dev.inputdevice, EV_ABS, ABS_BRAKE); 	/* status */
-    input_set_capability(P_dev.inputdevice, EV_ABS, ABS_MISC); 		/* wake */
-    input_set_capability(P_dev.inputdevice, EV_ABS, ABS_THROTTLE); 	/* enabled/delay */
 	P_dev.inputdevice->name = "proximity_sensor";
 
 	if((ret = input_register_device(P_dev.inputdevice))<0) 
@@ -352,36 +345,6 @@ int P_dev_shutdown(void)
 	return ret;
 }	
 
-int P_dev_return_to_op(void)
-{
-	int ret = 0;
-
-	trace_in();
-
-	LOCK();   
-
-	if( P_dev.device_state == NOT_DETECTED )
-	{
-		failed(1);
-		ret = -ENODEV;   
-	}
-	else if ( P_dev.power_state == OPERATIONAL )
-	{
-		debug("    already operational");
-		ret = 0;
-	}
-	else if( (ret = make_operational()) < 0 )
-	{
-		failed(4);
-	}
-
-	UNLOCK(); 
-
-	trace_out();
-
-	return ret;
-} 
-
 int P_dev_reset(void)
 {
 	int ret = 0;
@@ -420,37 +383,6 @@ void P_dev_check_wakeup_src(void)
 {
 	trace_in();
 	trace_out();
-}
-
-int P_dev_get_mode(u16 *mode)
-{
-	int ret = 0;
-
-	trace_in();
-
-	LOCK();   
-	debug("[ryun] P_dev_get_mode() P_dev.device_state = %d \n", P_dev.device_state);
-
-	if( P_dev.device_state == NOT_DETECTED )
-	{
-		failed(1);
-		ret = -ENODEV; 
-	}
-	else if( P_dev.power_state == SHUTDOWN )
-	{
-		failed(2);
-		ret = -EPERM;
-	}      
-	else 
-	{
-		*mode = P_dev.settings.operation_mode;
-	} 
-
-	UNLOCK(); 
-
-	trace_out();
-
-	return ret;
 }
 
 int P_dev_get_pwrstate_mode(u16 *power_state, u16 *mode)
@@ -516,36 +448,6 @@ void P_dev_work_func(struct work_struct *work)
 	UNLOCK(); 
 
 	trace_out();
-}
-
-int P_dev_get_prox_output(u16 *prox_op)
-{
-	int ret = 0;
-
-	trace_in();
-
-	LOCK();   
-
-	if( P_dev.device_state == NOT_DETECTED )
-	{
-		failed(1);
-		ret = -ENODEV; 
-	}
-	else if( P_dev.power_state == SHUTDOWN )
-	{
-		failed(2);
-		ret = -1;
-	}
-	else if( (ret = get_prox_output(prox_op)) < 0 )
-	{
-		failed(3);
-	}
-
-	UNLOCK(); 
-
-	trace_out();
-
-	return ret;
 }
 
 int P_dev_powerup_set_op_mode(u16 mode)
@@ -1125,26 +1027,20 @@ static ssize_t P_delay_show(struct device *dev, struct device_attribute *attr, c
 static ssize_t P_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t P_enable_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t P_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
-static ssize_t P_wake_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t P_data_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t P_status_show(struct device *dev, struct device_attribute *attr, char *buf);
 
 static DEVICE_ATTR(poll_delay, S_IRUGO|S_IWUSR|S_IWGRP, P_delay_show, P_delay_store);
 static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR|S_IWGRP, P_enable_show, P_enable_store);
-static DEVICE_ATTR(wake, S_IWUSR|S_IWGRP, NULL, P_wake_store);
 static DEVICE_ATTR(adc, S_IRUGO, P_data_show, NULL);
-static DEVICE_ATTR(state, S_IRUGO, P_status_show, NULL);
 
 static struct attribute *proximity_attributes[] = {
     &dev_attr_adc.attr,
-    &dev_attr_state.attr,
     NULL
 };
 
 static struct attribute *P_attributes[] = {
     &dev_attr_poll_delay.attr,
     &dev_attr_enable.attr,
-    &dev_attr_wake.attr,
     NULL
 };
 
@@ -1264,8 +1160,6 @@ static ssize_t P_enable_store(struct device *dev, struct device_attribute *attr,
 			}
 		}
 
-	input_report_abs(P_dev.inputdevice, ABS_THROTTLE, (enabled<<16) | P_dev.delay);
-	
 	trace_out();
 	return ret;
 }
@@ -1310,32 +1204,6 @@ static ssize_t P_delay_store(struct device *dev, struct device_attribute *attr, 
 
     sscanf(buf, "%d", &P_dev.delay);
 
-    input_report_abs(P_dev.inputdevice, ABS_THROTTLE, (enabled<<16) | P_dev.delay);
-
 	return ret;
 }
-
-static ssize_t P_wake_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-    static int cnt = 1;
-
-    input_report_abs(P_dev.inputdevice, ABS_MISC, cnt++);
-
-    return count;
-}
-
-static ssize_t P_status_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-    unsigned long flags;
-    int status;
-
-    spin_lock_irqsave(&P_dev.inputdevice->event_lock, flags);
-
-    status = P_dev.inputdevice->abs[ABS_BRAKE];
-
-    spin_unlock_irqrestore(&P_dev.inputdevice->event_lock, flags);
-
-    return sprintf(buf, "%d\n", status);
-}
-
 

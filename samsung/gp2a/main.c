@@ -37,7 +37,6 @@
 #include <asm/atomic.h>
 #include <asm/irq.h>
 
-#include "ioctls.h"
 #include "P_dev.h"
 #include "L_dev.h"
 #include "common.h"
@@ -101,10 +100,6 @@ static irqreturn_t P_isr( int irq, void *unused );
 
 /*waitq related functions*/
 static void P_waitq_init(void);
-static void P_waitq_list_insert_proc(P_fpriv_data_t *);
-static void P_waitq_prepare_to_wait(P_fpriv_data_t *);
-static void P_waitq_list_remove_proc(P_fpriv_data_t *);
-static void P_waitq_finish_wait(P_fpriv_data_t *);
 
 /*module param*/
 static u16 an_sleep_func = P_AN_SLEEP_OFF;
@@ -124,28 +119,6 @@ static struct wake_lock P_sensor_wake_lock;
 /*****************************************************************************/
 /******************           LIGHT SENSOR SPECIFIC          *****************/
 /*****************************************************************************/
-
-
-static u32 g_illum_lvl;
-
-/*module param: light sensor's illuminance level table*/
-u32 L_table [L_MAX_LVLS*5 + 1] = 
-{
-	/*total no of levels*/
-	9,
-
-	/*level no*/  /*lux (min)*/  /*lux(max)*/  /*mV(min)*/  /*mV(max)*/
-	1,               1,           164,            0,          100,
-	2,             165,           287,          101,         200,
-	3,             288,           496,         201,         300,
-	4,             497,           868,         301,         400,
-	5,             869,          1531,         401,         500,
-	6,            1532,          2691,         501,         600,
-	7,            2692,          4691,         601,         700,
-	8,            4692,          8279,         701,         800,
-	9,            8280,        100000,         801,         2500,    
-};
-
 
 static irqreturn_t P_isr( int irq, void *unused )
 {
@@ -172,38 +145,6 @@ static void P_waitq_init(void)
 	init_waitqueue_head( &(P_waitq.waitq) );
 	INIT_LIST_HEAD( &(P_waitq.list) );
 
-	trace_out();
-}
-
-static void P_waitq_list_insert_proc( P_fpriv_data_t *fpriv )
-{
-	trace_in();
-	mutex_lock( &(P_waitq.list_lock) );
-	list_add_tail(&(fpriv->node), &(P_waitq.list));
-	mutex_unlock( &(P_waitq.list_lock) );
-	trace_out();
-}
-
-static void P_waitq_prepare_to_wait( P_fpriv_data_t *fpriv )
-{
-	trace_in();
-	prepare_to_wait(&(P_waitq.waitq), &(fpriv->waitq_entry), TASK_INTERRUPTIBLE);
-	trace_out();
-}
-
-static void P_waitq_list_remove_proc( P_fpriv_data_t *fpriv )
-{
-	trace_in();
-	mutex_lock( &(P_waitq.list_lock) );
-	list_del_init( &(fpriv->node) );
-	mutex_unlock( &(P_waitq.list_lock) );
-	trace_out();
-}
-
-static void P_waitq_finish_wait( P_fpriv_data_t *fpriv )
-{
-	trace_in();
-	finish_wait(&(P_waitq.waitq), &(fpriv->waitq_entry));
 	trace_out();
 }
 
