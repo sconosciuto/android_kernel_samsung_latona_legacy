@@ -740,6 +740,8 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
         turn_resources_on_for_adc();
 
         pl_sensor_power_on();
+
+        L_dev.inputdevice->abs[ABS_MISC] = -1;
     }
     
     trace_out();
