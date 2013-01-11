@@ -976,7 +976,7 @@ CONFIG_APANIC_PLABEL="kpanic"
 # Texas Instruments shared transport line discipline
 #
 CONFIG_TI_ST=m
-CONFIG_SAMSUNG_DBG_LEVEL=y
+# CONFIG_SAMSUNG_DBG_LEVEL is not set
 CONFIG_HAVE_IDE=y
 # CONFIG_IDE is not set
 
