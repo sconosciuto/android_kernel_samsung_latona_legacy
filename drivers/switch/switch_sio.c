@@ -45,8 +45,6 @@ extern bool keyboard_enable;
 #endif
 
 extern struct class *sec_class;
-extern void (*sec_set_param_value)(int idx, void *value);
-extern void (*sec_get_param_value)(int idx, void *value);
 
 
 typedef enum
@@ -87,13 +85,8 @@ typedef enum
 #define GPIO_LEVEL_HIGH  1
 #endif
 
-#define USB_SEL_MASK    (1 << 0)
-#define UART_SEL_MASK   (1 << 1)
-
 static int usb_path = SWITCH_PDA;
 static int uart_current_owner = SWITCH_MODEM;
-
-struct delayed_work sio_switch_init_work;
 
 static void sio_switch_gpio_init(void)
 {
@@ -183,13 +176,7 @@ static ssize_t usb_sel_store
 	size_t size
 )
 {
-	int switch_sel;
 	int path_save = 1;
-
-	if (sec_get_param_value)
-	{
-		sec_get_param_value(__SWITCH_SEL, &switch_sel);
-	}
 
 	if(strstr(buf, "PDA") || strstr(buf, "pda"))
 	{
@@ -198,7 +185,6 @@ static ssize_t usb_sel_store
 			sio_switch_config(AP_USB_MODE);
 		}
 		usb_path = SWITCH_PDA;
-		switch_sel |= USB_SEL_MASK;
 		printk("[USB Switch] Path : PDA\n");
 	}
 	else if(strstr(buf, "MODEM") || strstr(buf, "modem"))
@@ -208,7 +194,6 @@ static ssize_t usb_sel_store
 			sio_switch_config(CP_USB_MODE);
 		}
 		usb_path = SWITCH_MODEM;
-		switch_sel &= ~USB_SEL_MASK;
 		printk("[USB Switch] Path : MODEM\n");
 	}
 
@@ -216,14 +201,6 @@ static ssize_t usb_sel_store
 	{
 		path_save = 0;
 		printk("[USB Switch] path is not saved\n");
-	}
-
-	if(path_save)
-	{
-		if (sec_set_param_value)
-		{
-			sec_set_param_value(__SWITCH_SEL, &switch_sel);
-		}
 	}
 
 	return size;
@@ -257,19 +234,10 @@ static ssize_t uart_switch_store
 	size_t size
 )
 {
-	int switch_sel;
 #ifdef PARAM_CONSOLE_MODE
 	int console_mode;
 #endif
 	int path_save = 1;
-
-	if (sec_get_param_value)
-	{
-		sec_get_param_value(__SWITCH_SEL, &switch_sel);
-#ifdef PARAM_CONSOLE_MODE
-		sec_get_param_value(__CONSOLE_MODE, &console_mode);
-#endif
-	}
 
 	if (strstr(buf, "PDA") || strstr(buf, "pda"))
 	{
@@ -278,7 +246,6 @@ static ssize_t uart_switch_store
 			sio_switch_config(AP_UART_MODE);
 		}
 		uart_current_owner = SWITCH_PDA;
-		switch_sel |= UART_SEL_MASK;
 #ifdef PARAM_CONSOLE_MODE
 		console_mode = 1;
 #endif
@@ -291,7 +258,6 @@ static ssize_t uart_switch_store
 			sio_switch_config(CP_UART_MODE);
 		}
 		uart_current_owner = SWITCH_MODEM;
-		switch_sel &= ~UART_SEL_MASK;
 #ifdef PARAM_CONSOLE_MODE
 		console_mode = 0;
 #endif
@@ -302,17 +268,6 @@ static ssize_t uart_switch_store
 	{
 		path_save = 0;
 		printk("[UART Switch] path is not saved\n");
-	}
-
-	if(path_save)
-	{
-		if (sec_set_param_value)
-		{
-			sec_set_param_value(__SWITCH_SEL, &switch_sel);
-#ifdef PARAM_CONSOLE_MODE
-			sec_set_param_value(__CONSOLE_MODE, &console_mode);
-#endif
-		}
 	}
 
 	return size;
@@ -353,47 +308,6 @@ static struct attribute *switch_sio_attributes[] = {
 static const struct attribute_group switch_sio_group = {
 	.attrs = switch_sio_attributes,
 };
-static void sio_switch_init_worker(struct work_struct *ignored)
-{
-	int switch_sel;
-
-	if (sec_get_param_value) {
-		sec_get_param_value(__SWITCH_SEL, &switch_sel);
-		cancel_delayed_work(&sio_switch_init_work);
-
-	} else {
-		schedule_delayed_work(&sio_switch_init_work, msecs_to_jiffies(100));		
-		return;
-	}
-
-	if (switch_sel & USB_SEL_MASK)
-		{
-		usb_path = SWITCH_PDA;
-		sio_switch_config(AP_USB_MODE);
-		}
-	else
-		usb_path = SWITCH_MODEM;
-
-	if (switch_sel & UART_SEL_MASK)
-		uart_current_owner = SWITCH_PDA;
-	else
-		uart_current_owner = SWITCH_MODEM;
-
-	if (uart_current_owner == SWITCH_PDA)
-	{
-		sio_switch_config(AP_UART_MODE);
-	}
-	else if (uart_current_owner == SWITCH_MODEM)
-	{
-		printk("----------------- Cutting off PDA UART ---------------------\n");
-		sio_switch_config(CP_UART_MODE);
-	}
-
-	if (usb_path == SWITCH_MODEM)
-	{
-		sio_switch_config(CP_USB_MODE);
-	}
-}
 
 static int sio_switch_probe(struct platform_device *pdev)
 {
@@ -401,8 +315,7 @@ static int sio_switch_probe(struct platform_device *pdev)
 
 	sio_switch_gpio_init();
 
-	INIT_DELAYED_WORK(&sio_switch_init_work, sio_switch_init_worker);
-	schedule_delayed_work(&sio_switch_init_work, msecs_to_jiffies(200));
+	sio_switch_config(CP_UART_MODE);
 
 	printk("[%s]: initialized\n", pdev->name);
 

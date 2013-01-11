@@ -43,12 +43,6 @@
 struct class *sec_class;
 EXPORT_SYMBOL(sec_class);
 
-void (*sec_set_param_value) (int idx, void *value);
-EXPORT_SYMBOL(sec_set_param_value);
-
-void (*sec_get_param_value) (int idx, void *value);
-EXPORT_SYMBOL(sec_get_param_value);
-
 char sec_androidboot_mode[16];
 EXPORT_SYMBOL(sec_androidboot_mode);
 
@@ -71,58 +65,6 @@ static __init int setup_boot_mode(char *opt)
 
 __setup("bootmode=", setup_boot_mode);
 
-struct sec_reboot_code {
-	char *cmd;
-	int mode;
-};
-
-static int __sec_common_reboot_call(struct notifier_block *this,
-				    unsigned long code, void *cmd)
-{
-	int mode = REBOOT_MODE_NONE;
-	int temp_mode;
-	int default_switchsel = 5;
-
-	struct sec_reboot_code reboot_tbl[] = {
-		{"arm11_fota", REBOOT_MODE_ARM11_FOTA},
-		{"arm9_fota", REBOOT_MODE_ARM9_FOTA},
-		{"recovery", REBOOT_MODE_RECOVERY},
-		{"cp_crash", REBOOT_MODE_CP_CRASH},
-	};
-	size_t i, n;
-
-	if ((code == SYS_RESTART) && cmd) {
-		n = ARRAY_SIZE(reboot_tbl);
-		for (i = 0; i < n; i++) {
-			if (!strcmp((char *)cmd, reboot_tbl[i].cmd)) {
-				mode = reboot_tbl[i].mode;
-				break;
-			}
-		}
-	}
-
-	if (code != SYS_POWER_OFF) {
-		if (sec_get_param_value && sec_set_param_value) {
-			/* in case of RECOVERY mode we set switch_sel
-			 * with default value */
-			sec_get_param_value(__REBOOT_MODE, &temp_mode);
-			if (temp_mode == REBOOT_MODE_RECOVERY)
-				sec_set_param_value(__SWITCH_SEL,
-						    &default_switchsel);
-		}
-
-		/* set normal reboot_mode when reset */
-		if (sec_set_param_value)
-			sec_set_param_value(__REBOOT_MODE, &mode);
-	}
-
-	return NOTIFY_DONE;
-}				/* end fn __sec_common_reboot_call */
-
-static struct notifier_block __sec_common_reboot_notifier = {
-	.notifier_call = __sec_common_reboot_call,
-};
-
 int __init sec_common_init_early(void)
 {
 	return 0;
@@ -139,8 +81,6 @@ int __init sec_common_init(void)
 
 int __init sec_common_init_post(void)
 {
-	register_reboot_notifier(&__sec_common_reboot_notifier);
-
 #if defined (CONFIG_SAMSUNG_USE_SEC_LOG_BUF)
 	sec_log_buf_init();
 #endif /* CONFIG_SAMSUNG_USE_SEC_LOG_BUF */

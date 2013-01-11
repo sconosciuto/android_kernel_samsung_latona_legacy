@@ -373,59 +373,6 @@ static const struct usbhs_omap_platform_data usbhs_pdata __initconst = {
 	.reset_gpio_port[2] = -EINVAL,
 };
 
-struct sec_reboot_code {
-	char *cmd;
-	int mode;
-};
-
-static int omap_board_reboot_call(struct notifier_block *this,
-				  unsigned long code, void *cmd)
-{
-	int mode = REBOOT_MODE_NONE;
-	int temp_mode;
-	int default_switchsel = 5; 
-	
-	struct sec_reboot_code reboot_tbl[] = {
-		{"arm11_fota", REBOOT_MODE_ARM11_FOTA},
-		{"arm9_fota", REBOOT_MODE_ARM9_FOTA},
-		{"recovery", REBOOT_MODE_RECOVERY},
-		{"download", REBOOT_MODE_DOWNLOAD},
-		{"cp_crash", REBOOT_MODE_CP_CRASH}
-	};
-	size_t i, n;
-
-	if ((code == SYS_RESTART) && cmd) {
-		n = sizeof(reboot_tbl) / sizeof(struct sec_reboot_code);
-		for (i = 0; i < n; i++) {
-			if (!strcmp((char *)cmd, reboot_tbl[i].cmd)) {
-				mode = reboot_tbl[i].mode;
-				break;
-			}
-		}
-	}
-
-	if (code != SYS_POWER_OFF)
-		{
-		if (sec_get_param_value && sec_set_param_value)
-			{
-			/*in case of RECOVERY mode we set switch_sel with default value*/
-			sec_get_param_value(__REBOOT_MODE, &temp_mode);
-			if(temp_mode == REBOOT_MODE_RECOVERY)
-				sec_set_param_value(__SWITCH_SEL, &default_switchsel);
-			}
-		
-		/*set normal reboot_mode when reset*/	
-		if (sec_set_param_value)
-			sec_set_param_value(__REBOOT_MODE, &mode);
-		}
-
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block omap_board_reboot_notifier = {
-	.notifier_call = omap_board_reboot_call,
-};
-
 /* OPP MPU/IVA Clock Frequency */
 struct opp_frequencies {
 	unsigned long mpu;
