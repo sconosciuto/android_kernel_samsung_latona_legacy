@@ -156,6 +156,7 @@ fi
 res="${res}${CONFIG_LOCALVERSION}${LOCALVERSION}"
 
 # scm version string if not at a tagged commit
+if false; then
 if test "$CONFIG_LOCALVERSION_AUTO" = "y"; then
 	# full scm version string
 	res="$res$(scm_version)"
@@ -166,6 +167,7 @@ else
 		scm=$(scm_version --short)
 		res="$res${scm:++}"
 	fi
+fi
 fi
 
 echo "$res"
