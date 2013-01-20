@@ -79,7 +79,6 @@
 
 #include <linux/i2c/twl.h>	// ryun 20091125 
 #include <linux/earlysuspend.h>	// ryun 20200107 for early suspend
-#include <plat/omap-pm.h>	// ryun 20200107 for touch boost
 
 #ifdef TOUCH_PROC
 #include <linux/proc_fs.h>
@@ -110,14 +109,7 @@ extern int is_suspend_state; //to check suspend mode
 extern uint8_t touch_state;
 extern uint8_t get_message(void);
 
-// OMAP3630 OPP Clock Frequency Table
-#define VDD1_OPP4_FREQ         S1000M
-#define VDD1_OPP3_FREQ         S800M
-#define VDD1_OPP2_FREQ         S600M
-#define VDD1_OPP1_FREQ         S300M
-
 //modified for samsung customisation -touchscreen 
-unsigned short enable_touch_boost;
 unsigned int g_firmware_ret = 2;
 static ssize_t ts_show(struct kobject *, struct kobj_attribute *, char *);
 static ssize_t ts_store(struct kobject *k, struct kobj_attribute *,
@@ -175,9 +167,6 @@ struct touchscreen_t {
 	struct ts_device *dev;
 	struct early_suspend	early_suspend;// ryun 20200107 for early suspend
 	struct work_struct  tsp_work;	// ryun 20100107 
-	struct timer_list opp_set_timer;	// ryun 20100107 for touch boost
-	struct work_struct constraint_wq;
-	int opp_high;	// ryun 20100107 for touch boost	
 };
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -292,7 +281,6 @@ void set_touch_irq_gpio_disable(void);	// ryun 20091203
 void clear_touch_history(void);
 
 //samsung customisation
-static struct kobj_attribute touch_boost_attr =     __ATTR(touch_boost, 0644, ts_show, ts_store);
 static struct kobj_attribute firmware_attr =        __ATTR(set_qt_firm_update, 0220, NULL, firmware_update_store);
 static struct kobj_attribute firmware_binary_attr = __ATTR(set_qt_firm_version, 0444, firmware_version_show, NULL);
 static struct kobj_attribute firmware_binary_read_attr = __ATTR(set_qt_firm_version_read, 0444, firmware_version_read_show, NULL);
@@ -381,52 +369,7 @@ void clear_touch_history(void)
 #endif
 }
 
-static ssize_t ts_show(struct kobject *kobj, struct kobj_attribute *attr,
-			 char *buf)
-{
-	if (attr == &touch_boost_attr)
-		return sprintf(buf, "%hu\n", enable_touch_boost);
-	
-	else
-		return -EINVAL;
-
-}
-static ssize_t ts_store(struct kobject *kobj, struct kobj_attribute *attr,
-			  const char *buf, size_t n)
-{
-	unsigned short value;
-
-	if (sscanf(buf, "%hu", &value) != 1) {
-		printk(KERN_ERR "ts_store: Invalid value\n");
-		return -EINVAL;
-	}
-
-	if (attr == &touch_boost_attr) {
-		enable_touch_boost = value;
-	} 
-
-	 else {
-		return -EINVAL;
-	}
-
-	return n;
-}
 //samsung customisation
-
-//[[ ryun 20100107 for touch boost
-static void tsc_timer_out (unsigned long v)
-	{
-		schedule_work(&(tsp.constraint_wq));
-		return;
-	}
-
-void tsc_remove_constraint_handler(struct work_struct *work)
-{
-		//omap_pm_set_min_mpu_freq(&(tsp.dev), VDD1_OPP1_FREQ);     //Jyothi
-                tsp.opp_high = 0;
-}
-
-//]] ryun 20200107 for touch boost
 
 /* ryun 20091125 
 struct omap3430_pin_config touch_i2c_gpio_init[] = {
@@ -905,13 +848,6 @@ void read_func_for_only_single_touch(struct work_struct *work)
 //	PRINT_FUNCTION_ENTER;
 	struct touchscreen_t *ts = container_of(work,
 					struct touchscreen_t, tsp_work);
-	if(enable_touch_boost) //added for touchscreen boost,samsung customisation,enabled in init.rc
-	{	
-		if (timer_pending(&ts->opp_set_timer))
-			del_timer(&ts->opp_set_timer);
-		//omap_pm_set_min_mpu_freq(&(ts->dev), VDD1_OPP4_FREQ);
-		mod_timer(&ts->opp_set_timer, jiffies + (100 * HZ) / 1000);
-	}
 
 //	g_i2c_debugging_enable = 0;
 	if(read_mem(message_processor_address, max_message_length, atmel_msg) == READ_MEM_OK)
@@ -998,14 +934,6 @@ void read_func_for_multi_touch(struct work_struct *work)
 //	PRINT_FUNCTION_ENTER;
 	struct touchscreen_t *ts = container_of(work,
 					struct touchscreen_t, tsp_work);
-
-	if(enable_touch_boost) //added for touchscreen boost,samsung customisation,enabled in init.rc
-	{
-		if (timer_pending(&ts->opp_set_timer))
-			del_timer(&ts->opp_set_timer);
-		//omap_pm_set_min_mpu_freq(&(ts->dev), VDD1_OPP4_FREQ);
-		mod_timer(&ts->opp_set_timer, jiffies + (500 * HZ) / 1000);
-	}
 
 
 //	g_i2c_debugging_enable = 0;
@@ -1134,12 +1062,6 @@ static int __init touchscreen_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-  	init_timer(&tsp.opp_set_timer);
-  	tsp.opp_set_timer.data = (unsigned long)&tsp; 
-  	tsp.opp_set_timer.function = tsc_timer_out;
-
-	INIT_WORK(&(tsp.constraint_wq), tsc_remove_constraint_handler);
-
 	/* request irq */
 	if (tsp.irq != -1)
 	{
@@ -1202,14 +1124,6 @@ static int __init touchscreen_probe(struct platform_device *pdev)
 ts_kobj = kobject_create_and_add("touchscreen", NULL);
 	if (!ts_kobj)
 		return -ENOMEM;
-
-
-	error = sysfs_create_file(ts_kobj,
-				  &touch_boost_attr.attr);
-	if (error) {
-		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
-		return error;
-	}
 
 	error = sysfs_create_file(ts_kobj,
 				  &firmware_attr.attr);
