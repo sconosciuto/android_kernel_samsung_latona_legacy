@@ -113,8 +113,6 @@ static ssize_t ts_show(struct kobject *, struct kobj_attribute *, char *);
 static ssize_t ts_store(struct kobject *k, struct kobj_attribute *,
 			  const char *buf, size_t n);
 static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_version_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_version_read_show(struct device *dev, struct device_attribute *attr, char *buf);
 //modified for samsung customisation
 
 const unsigned char fw_bin_version = 0x16;
@@ -273,8 +271,7 @@ void set_touch_irq_gpio_disable(void);	// ryun 20091203
 void clear_touch_history(void);
 
 //samsung customisation
-static struct kobj_attribute firmware_binary_attr = __ATTR(set_qt_firm_version, 0444, firmware_version_show, NULL);
-static struct kobj_attribute firmware_binary_read_attr = __ATTR(set_qt_firm_version_read, 0444, firmware_version_read_show, NULL);
+static struct kobj_attribute firmware_binary_attr = __ATTR(show_firmware_version, 0444, firmware_show, NULL);
 
 /*------------------------------ for tunning ATmel - start ----------------------------*/
 extern  ssize_t set_power_show(struct device *dev, struct device_attribute *attr, char *buf);
@@ -442,24 +439,13 @@ void enable_tsp_irq(void)
 static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf)
 {	// v1.2 = 18 , v1.4 = 20 , v1.5 = 21
 	printk(KERN_DEBUG "[TSP] QT602240 Firmware Ver.\n");
-	printk(KERN_DEBUG "[TSP] version = %x\n", g_version);
-	printk(KERN_DEBUG "[TSP] Build = %x\n", g_build);
+	printk(KERN_DEBUG "[TSP] version = %d\n", g_version);
+	printk(KERN_DEBUG "[TSP] Build = %d\n", g_build);
 	//	printk("[TSP] version = %d\n", info_block->info_id.version);
 	//	sprintf(buf, "QT602240 Firmware Ver. %x\n", info_block->info_id.version);
-	sprintf(buf, "QT602240 Firmware Ver. %x \nQT602240 Firmware Build. %x\n", g_version, g_build );
+	sprintf(buf, "QT602240 Firmware Ver. %d \nQT602240 Firmware Build. %d\n", g_version, g_build );
 
 	return sprintf(buf, "%s", buf );
-}
-
-static ssize_t firmware_version_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	printk(KERN_DEBUG "[TSP] QT602240 Firmware Image Ver.\n");
-	return sprintf(buf, "%d\n", fw_bin_version);
-}
-
-static ssize_t firmware_version_read_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", g_version);
 }
 
 void initialize_multi_touch(void)
@@ -1061,13 +1047,6 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 
 	error = sysfs_create_file(ts_kobj,
 				  &firmware_binary_attr.attr);
-	if (error) {
-		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
-		return error;
-		}
-
-	error = sysfs_create_file(ts_kobj,
-				  &firmware_binary_read_attr.attr);
 	if (error) {
 		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
 		return error;
