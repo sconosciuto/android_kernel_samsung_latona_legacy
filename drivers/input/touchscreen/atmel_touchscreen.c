@@ -85,7 +85,6 @@
 #include <linux/uaccess.h>
 #endif
 
-#include <linux/wakelock.h>
 #include "atmel_touch.h"
 
 #ifdef CONFIG_TOUCHKEY_LOCK
@@ -110,17 +109,12 @@ extern uint8_t touch_state;
 extern uint8_t get_message(void);
 
 //modified for samsung customisation -touchscreen 
-unsigned int g_firmware_ret = 2;
 static ssize_t ts_show(struct kobject *, struct kobj_attribute *, char *);
 static ssize_t ts_store(struct kobject *k, struct kobj_attribute *,
 			  const char *buf, size_t n);
 static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_update_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size);
 static ssize_t firmware_version_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t firmware_version_read_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_ret_show(struct device *dev, struct device_attribute *attr, char *buf);
 //modified for samsung customisation
 
 const unsigned char fw_bin_version = 0x16;
@@ -199,8 +193,6 @@ struct file_operations touch_proc_fops =
         .ioctl=touch_proc_ioctl,
 };
 #endif
-
-struct wake_lock tsp_firmware_wake_lock;
 
 // [[ ryun 20100113 
 typedef struct
@@ -281,10 +273,8 @@ void set_touch_irq_gpio_disable(void);	// ryun 20091203
 void clear_touch_history(void);
 
 //samsung customisation
-static struct kobj_attribute firmware_attr =        __ATTR(set_qt_firm_update, 0220, NULL, firmware_update_store);
 static struct kobj_attribute firmware_binary_attr = __ATTR(set_qt_firm_version, 0444, firmware_version_show, NULL);
 static struct kobj_attribute firmware_binary_read_attr = __ATTR(set_qt_firm_version_read, 0444, firmware_version_read_show, NULL);
-static struct kobj_attribute firmware_ret_attr =    __ATTR(set_qt_firm_status, 0444, firmware_ret_show, NULL);
 
 /*------------------------------ for tunning ATmel - start ----------------------------*/
 extern  ssize_t set_power_show(struct device *dev, struct device_attribute *attr, char *buf);
@@ -425,7 +415,6 @@ extern U8 read_mem(U16 start, U8 size, U8 *mem);
 extern uint16_t message_processor_address;
 extern uint8_t max_message_length;
 extern uint8_t *atmel_msg;
-extern uint8_t QT_Boot(uint8_t qt_force_update);
 extern unsigned long simple_strtoul(const char *,char **,unsigned int);
 extern unsigned char g_version, g_build, qt60224_notfound_flag;
 
@@ -462,51 +451,6 @@ static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, 
 	return sprintf(buf, "%s", buf );
 }
 
-static ssize_t firmware_update_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	char *after;
-	unsigned long value;
-	g_firmware_ret = 2;
-
-	value = simple_strtoul(buf, &after, 10);	
-	printk(KERN_INFO "[TSP] %s\n", __FUNCTION__);
-
-	if ( value == 1 )	// auto update.
-	{
-		printk(KERN_DEBUG "[TSP] Firmware update start!!\n" );
-		printk(KERN_DEBUG "[TSP] version = 0x%x\n", g_version );
-
-//		if( g_version <= 22 ) 
-		if(((g_version != 0x14)&&(g_version <0x16))||((g_version==0x16)&&(g_build==0xaa)))
-		{			
-			wake_lock(&tsp_firmware_wake_lock);
-#ifdef CONFIG_HAS_EARLYSUSPEND
-			unregister_early_suspend(&tsp.early_suspend);
-#endif	/* CONFIG_HAS_EARLYSUSPEND */
-			g_firmware_ret = QT_Boot(qt60224_notfound_flag);
-#ifdef CONFIG_HAS_EARLYSUSPEND
-			register_early_suspend(&tsp.early_suspend);
-#endif	/* CONFIG_HAS_EARLYSUSPEND */
-			qt60224_notfound_flag = 0;
-			wake_unlock(&tsp_firmware_wake_lock);			
-		}	
-		else
-		{
-			g_firmware_ret = 1; 
-		}
-		printk(KERN_DEBUG "[TSP] Firmware result = %d\n", g_firmware_ret );
-
-		return size;
-	}
-	else
-	{
-		g_firmware_ret = 0;
-		return 0;
-	}
-}
-
 static ssize_t firmware_version_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	printk(KERN_DEBUG "[TSP] QT602240 Firmware Image Ver.\n");
@@ -516,16 +460,6 @@ static ssize_t firmware_version_show(struct device *dev, struct device_attribute
 static ssize_t firmware_version_read_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", g_version);
-}
-
-static ssize_t firmware_ret_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	if(g_firmware_ret == 2)
-	{
-		return sprintf(buf, "PASS\n");
-	}
-	
-	return sprintf(buf, "FAIL\n");
 }
 
 void initialize_multi_touch(void)
@@ -1126,13 +1060,6 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 		return -ENOMEM;
 
 	error = sysfs_create_file(ts_kobj,
-				  &firmware_attr.attr);
-	if (error) {
-		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
-		return error;
-		}
-
-	error = sysfs_create_file(ts_kobj,
 				  &firmware_binary_attr.attr);
 	if (error) {
 		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
@@ -1141,13 +1068,6 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 
 	error = sysfs_create_file(ts_kobj,
 				  &firmware_binary_read_attr.attr);
-	if (error) {
-		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
-		return error;
-		}
-
-	error = sysfs_create_file(ts_kobj,
-				  &firmware_ret_attr.attr);
 	if (error) {
 		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
 		return error;
@@ -1442,8 +1362,6 @@ static int __init touchscreen_init(void)
         gpio_set_value(OMAP_GPIO_TOUCH_EN, 1);  // TOUCH EN
         msleep(80);
 
-	wake_lock_init(&tsp_firmware_wake_lock, WAKE_LOCK_SUSPEND, "TSP");
-
 	ret = platform_device_register(&touchscreen_device);
 	if (ret != 0)
 		return -ENODEV;
@@ -1459,7 +1377,6 @@ static int __init touchscreen_init(void)
 
 static void __exit touchscreen_exit(void)
 {
-	wake_lock_destroy(&tsp_firmware_wake_lock);
 	platform_driver_unregister(&touchscreen_driver);
 	platform_device_unregister(&touchscreen_device);
 }
