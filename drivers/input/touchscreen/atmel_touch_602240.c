@@ -4898,7 +4898,7 @@ int set_tsp_for_ta_detect(int state)
 	if(state)
 	{
 		tchthr_old = config_normal.touchscreen_config.tchthr;
-		config_normal.touchscreen_config.tchthr = 60; //touchscreen_config.tchthr = 70;
+		config_normal.touchscreen_config.tchthr = 50; //touchscreen_config.tchthr = 70;
 		config_normal.noise_suppression_config.noisethr = 20; //noise_suppression_config.noisethr = 20;		   
 
 		printk(KERN_DEBUG "[TSP] high noise mode\n");
