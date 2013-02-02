@@ -38,6 +38,13 @@
 #define CARKIT_ANA_CTRL     0xBB
 #define SEL_MADC_MCPC       0x08
 
+/* 
+ * When enabled, consecutives values belonging to the same brightness
+ * step will be ignored.
+ * Steps are defined in brightness_step_table.
+ */
+#define FILTER 0
+
 /*
  * lock: mutex to serialize the access to this data structure 
  * t2_vintana2_ldo: res_handle structure for VINTANA 2 LDO in TWL4030
