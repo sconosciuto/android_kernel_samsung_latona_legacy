@@ -756,7 +756,7 @@ static ssize_t L_delay_show(struct device *dev, struct device_attribute *attr, c
     trace_in();
 
     debug("   sensor L_interval_show() : %u", interval );
-    ret = sprintf(buf, "%u\n", interval);
+    ret = sprintf(buf, "%u000000\n", interval); //milliseconds->nanoseconds
 
     trace_out();
     return ret;
@@ -771,7 +771,8 @@ static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, 
     trace_in();
 
     sscanf(buf, "%u", &delay);
-    L_dev_set_polling_interval(delay);
+    delay /= 1000*1000; //nanoseconds->milliseconds
+    L_dev_set_polling_interval(delay ? delay : 1);
 
     if( L_dev_get_polling_state() == L_SYSFS_POLLING_ON)
     {
