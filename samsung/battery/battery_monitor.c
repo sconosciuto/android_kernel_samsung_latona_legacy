@@ -197,6 +197,8 @@ extern u32 sec_bootmode;
 int stop_temperature_overheat = CHARGE_STOP_TEMPERATURE_MAX;
 int recover_temperature_overheat = CHARGE_RECOVER_TEMPERATURE_MAX;
 
+static unsigned int work_delay = 1500;
+
 #ifdef CONFIG_SEC_BATTERY_USE_RECOVERY_MODE
 static int recovery_mode = 0;
 module_param(recovery_mode, bool, 0);
@@ -325,6 +327,23 @@ static ssize_t store_event(struct kobject *kobj,
 }
 
 /* END of Event logging */
+
+static ssize_t store_work_delay(struct kobject *kobj,
+                    struct kobj_attribute *attr,
+                    const char *buf, size_t size)
+{
+	sscanf(buf, "%u", &work_delay);
+	return size;
+}
+
+static ssize_t show_work_delay(struct kobject *kobj,
+                    struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", work_delay);
+}
+
+static struct kobj_attribute work_delay_attribute =
+    __ATTR(work_delay, S_IRUGO|S_IWUSR , show_work_delay, store_work_delay); 
 
 int _charger_state_change_( int category, int value, bool is_sleep )
 {
@@ -1372,6 +1391,12 @@ static int __devinit battery_probe( struct platform_device *pdev )
         }
     }
 
+    ret = sysfs_create_file( &di->sec_battery.dev->kobj, &work_delay_attribute.attr );
+    if ( ret )
+    {
+        pr_info( "[BM] sysfs create fail - %s\n", work_delay_attribute.attr.name );
+    }
+
     // Set GPIO to control thermal sensor power
     if (gpio_is_valid(OMAP_GPIO_EN_TEMP_VDD))
     {
@@ -1548,7 +1573,10 @@ static int battery_resume( struct platform_device *pdev )
 
     sec_bci.charger.full_charge_dur_sleep = 0x0;
 
-    queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ);
+    if(sec_bci.charger.is_charging)
+        queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ);
+    else
+        queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, msecs_to_jiffies(work_delay));
     queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_polling_work, sec_bci.battery.monitor_duration * HZ); 
 
     return 0;
