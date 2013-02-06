@@ -29,6 +29,8 @@
 #include <linux/completion.h>
 #include <linux/mutex.h>
 
+#include <trace/events/power.h>
+
 #define dprintk(msg...) cpufreq_debug_printk(CPUFREQ_DEBUG_CORE, \
 						"cpufreq-core", msg)
 
@@ -68,7 +70,7 @@ static DEFINE_PER_CPU(int, cpufreq_policy_cpu);
 static DEFINE_PER_CPU(struct rw_semaphore, cpu_policy_rwsem);
 
 #define lock_policy_rwsem(mode, cpu)					\
-int lock_policy_rwsem_##mode						\
+static int lock_policy_rwsem_##mode					\
 (int cpu)								\
 {									\
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);		\
@@ -83,26 +85,22 @@ int lock_policy_rwsem_##mode						\
 }
 
 lock_policy_rwsem(read, cpu);
-EXPORT_SYMBOL_GPL(lock_policy_rwsem_read);
 
 lock_policy_rwsem(write, cpu);
-EXPORT_SYMBOL_GPL(lock_policy_rwsem_write);
 
-void unlock_policy_rwsem_read(int cpu)
+static void unlock_policy_rwsem_read(int cpu)
 {
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);
 	BUG_ON(policy_cpu == -1);
 	up_read(&per_cpu(cpu_policy_rwsem, policy_cpu));
 }
-EXPORT_SYMBOL_GPL(unlock_policy_rwsem_read);
 
-void unlock_policy_rwsem_write(int cpu)
+static void unlock_policy_rwsem_write(int cpu)
 {
 	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);
 	BUG_ON(policy_cpu == -1);
 	up_write(&per_cpu(cpu_policy_rwsem, policy_cpu));
 }
-EXPORT_SYMBOL_GPL(unlock_policy_rwsem_write);
 
 
 /* internal prototypes */
@@ -354,6 +352,9 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 
 	case CPUFREQ_POSTCHANGE:
 		adjust_jiffies(CPUFREQ_POSTCHANGE, freqs);
+		dprintk("FREQ: %lu - CPU: %lu", (unsigned long)freqs->new,
+			(unsigned long)freqs->cpu);
+		trace_power_frequency(POWER_PSTATE, freqs->new, freqs->cpu);
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
 		if (likely(policy) && likely(policy->cpu == freqs->cpu))
@@ -408,21 +409,14 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 		t = __find_governor(str_governor);
 
 		if (t == NULL) {
-			char *name = kasprintf(GFP_KERNEL, "cpufreq_%s",
-								str_governor);
+			int ret;
 
-			if (name) {
-				int ret;
+			mutex_unlock(&cpufreq_governor_mutex);
+			ret = request_module("cpufreq_%s", str_governor);
+			mutex_lock(&cpufreq_governor_mutex);
 
-				mutex_unlock(&cpufreq_governor_mutex);
-				ret = request_module("%s", name);
-				mutex_lock(&cpufreq_governor_mutex);
-
-				if (ret == 0)
-					t = __find_governor(str_governor);
-			}
-
-			kfree(name);
+			if (ret == 0)
+				t = __find_governor(str_governor);
 		}
 
 		if (t != NULL) {
@@ -917,8 +911,8 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 
 	spin_lock_irqsave(&cpufreq_driver_lock, flags);
 	for_each_cpu(j, policy->cpus) {
-	if (!cpu_online(j))
-		continue;
+		if (!cpu_online(j))
+			continue;
 		per_cpu(cpufreq_cpu_data, j) = policy;
 		per_cpu(cpufreq_policy_cpu, j) = policy->cpu;
 	}
@@ -1875,8 +1869,7 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
-static struct notifier_block __refdata cpufreq_cpu_notifier =
-{
+static struct notifier_block __refdata cpufreq_cpu_notifier = {
     .notifier_call = cpufreq_cpu_callback,
 };
 
@@ -1918,8 +1911,10 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 
 	ret = sysdev_driver_register(&cpu_sysdev_class,
 					&cpufreq_sysdev_driver);
+	if (ret)
+		goto err_null_driver;
 
-	if ((!ret) && !(cpufreq_driver->flags & CPUFREQ_STICKY)) {
+	if (!(cpufreq_driver->flags & CPUFREQ_STICKY)) {
 		int i;
 		ret = -ENODEV;
 
@@ -1934,21 +1929,22 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 		if (ret) {
 			dprintk("no CPU initialized for driver %s\n",
 							driver_data->name);
-			sysdev_driver_unregister(&cpu_sysdev_class,
-						&cpufreq_sysdev_driver);
-
-			spin_lock_irqsave(&cpufreq_driver_lock, flags);
-			cpufreq_driver = NULL;
-			spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
+			goto err_sysdev_unreg;
 		}
 	}
 
-	if (!ret) {
-		register_hotcpu_notifier(&cpufreq_cpu_notifier);
-		dprintk("driver %s up and running\n", driver_data->name);
-		cpufreq_debug_enable_ratelimit();
-	}
+	register_hotcpu_notifier(&cpufreq_cpu_notifier);
+	dprintk("driver %s up and running\n", driver_data->name);
+	cpufreq_debug_enable_ratelimit();
 
+	return 0;
+err_sysdev_unreg:
+	sysdev_driver_unregister(&cpu_sysdev_class,
+			&cpufreq_sysdev_driver);
+err_null_driver:
+	spin_lock_irqsave(&cpufreq_driver_lock, flags);
+	cpufreq_driver = NULL;
+	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
