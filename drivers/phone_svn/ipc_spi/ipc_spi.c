@@ -3521,35 +3521,6 @@ err :
 	ipc_spi_make_data_interrupt( int_cmd_fail, od );
 }
 
-extern void ( *onedram_cp_force_crash ) ( void );
-static void ipc_spi_cp_force_crash( void )
-{
-	u32 int_cmd = 0;
-	
-	printk( "[ipc_spi_cp_force_crash]\n" );
-
-	if( ipc_spi ) {
-// Silent Reset
-#if 0
-		// make data interrupt cmd
-		int_cmd = MB_CMD( MBC_ERR_DISPLAY );
-		
-		ipc_spi->reg->mailbox_BA = int_cmd;
-
-		if( transfer_thread_waiting ) {
-			//transfer_thread_waiting = 0;
-			up( &transfer_event_sem );
-		}
-
-		printk( "Send CP Fatal command.\n" );
-#endif
-	}
-	else {
-		printk( "error ipc_spi null.\n" );
-	}
-	
-}
-
 void  ipc_spi_restart_spi( void )
 {
 	printk( "Phone Restart SPI Init.\n" );
@@ -3664,7 +3635,6 @@ static int __devinit ipc_spi_platform_probe( struct platform_device *pdev )
 		goto err;
 	}
 
-	onedram_cp_force_crash = ipc_spi_cp_force_crash;
 	wake_up_process(th);
 
 	dev_info( &pdev->dev, "(%d) platform probe Done.\n", __LINE__ );
