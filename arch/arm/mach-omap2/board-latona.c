@@ -53,6 +53,7 @@
 //#include "sdram-hynix-h8mbx00u0mer-0em.h"
 #include "sdram-qimonda-hyb18m512160af-6.h"
 
+#include "pm.h"
 #include "smartreflex-class1p5.h"
 
 /* TODO: OMAP-Samsung Board-Porting Layer */
@@ -77,6 +78,23 @@ EXPORT_SYMBOL(hw_revision);
 
 struct device *sio_switch_dev;
 EXPORT_SYMBOL(sio_switch_dev);
+
+static struct cpuidle_params omap_cpuidle_params_table[] = {
+	/* C1 */
+	{1, 0, 12, 5},
+	/* C2 */
+	{1, 0, 18, 20},
+	/* C3 */
+	{1, 50, 50, 300},
+	/* C4 */
+	{1, 1500, 1800, 4000},
+	/* C5 */
+	{1, 2500, 7500, 12000},
+	/* C6 */
+	{1, 3000, 8500, 15000},
+	/* C7 */
+	{1, 10000, 30000, 300000},
+};
 
 #ifdef CONFIG_PM
 static struct omap_volt_vc_data vc_config = {
@@ -356,6 +374,7 @@ static void __init omap_board_init_irq(void)
 {
 	omap_board_config = omap_board_sec_config;
 	omap_board_config_size = ARRAY_SIZE(omap_board_sec_config);
+	omap3_pm_init_cpuidle(omap_cpuidle_params_table);
 	//omap2_init_common_hw(h8mbx00u0mer0em_sdrc_params,
 			  //   h8mbx00u0mer0em_sdrc_params);
   omap2_init_common_hw(hyb18m512160af6_sdrc_params, NULL);
