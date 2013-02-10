@@ -69,8 +69,6 @@ struct powerdomain *mpu_pd, *core_pd, *cam_pd;
  * the best power savings) used on boards which do not
  * pass these details from the board file.
  */
- #if 0
- 
 static struct cpuidle_params cpuidle_params_table[] = {
 	/* C1 */
 	{1, 2, 2, 5},
@@ -87,25 +85,7 @@ static struct cpuidle_params cpuidle_params_table[] = {
 	/* C7 */
 	{1, 10000, 30000, 300000},
 };
- 
-#endif 
 
- static struct cpuidle_params cpuidle_params_table[] = {
- 	/* C1 */
- 	{1, 0, 12, 15},	
- /* C2 */	
- 	{1, 0, 18, 20},
- /* C3 */	
- 	{1, 50, 50, 300},
- /* C4 */	
- 	{1, 1500, 1800, 4000},	
- /* C5 */	
- 	{1, 2500, 7500, 12000},
- 	/* C6 */	
- 	{1, 3000, 8500, 15000},
- 	/* C7 */	
- 	{1, 10000, 30000, 300000},
- 	};
 static int omap3_idle_bm_check(void)
 {
 	if (!omap3_can_sleep())
