@@ -34,6 +34,9 @@
 #include <linux/i2c/twl.h>
 #include <linux/slab.h>
 
+void ( *onedram_cp_force_crash ) ( void );
+EXPORT_SYMBOL( onedram_cp_force_crash );
+
 extern int home_key_press_status;
 
 /*
@@ -207,6 +210,12 @@ static int twl4030_read_kp_matrix_state(struct twl4030_keypad *kp, u16 *state)
 	{
 		printk(KERN_ERR "%s : Force Crash by keypad\n", __func__);
 		panic("__forced_upload");
+	}
+	else if( ( new_state[ 2 ] == 2 ) && home_key_press_status ) {
+		printk( KERN_ERR "%s : CP Force Crash by keypad\n", __func__ );
+
+		if( onedram_cp_force_crash )
+			onedram_cp_force_crash();
 	}
 #endif
 

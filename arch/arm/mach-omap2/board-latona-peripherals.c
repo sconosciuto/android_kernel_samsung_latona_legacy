@@ -199,6 +199,12 @@ static void ipc_spi_cfg_gpio( void )
 	if( err ) {
 		printk( "ipc_spi_cfg_gpio - fail to request gpio %s : %d\n", "IPC_SRDY", err );
 	}
+	else {
+		gpio_direction_input( gpio_ipc_srdy );
+	}
+	
+	// Irq Setting -
+	set_irq_type( OMAP_GPIO_IRQ( OMAP_GPIO_IPC_SRDY ), IRQ_TYPE_LEVEL_HIGH );
 }
 #endif // CONFIG_PHONE_ONEDRAM, CONFIG_PHONE_IPC_SPI
 
