@@ -129,16 +129,10 @@ static int g_enable_touchscreen_handler = 0;	// fixed for i2c timeout error.
 
 #define DRIVER_FILTER
 
-#define TOUCH_MENU	  KEY_MENU
-#define TOUCH_SEARCH  KEY_SEARCH 
-#define TOUCH_HOME  KEY_HOME
-#define TOUCH_BACK	  KEY_BACK
-
 #if defined(CONFIG_MACH_SAMSUNG_LATONA) || defined(CONFIG_MACH_SAMSUNG_P1WIFI)
 #define MAX_TOUCH_X_RESOLUTION	480
 #define MAX_TOUCH_Y_RESOLUTION	800
-int atmel_ts_tk_keycode[] =
-{ TOUCH_MENU, TOUCH_BACK };
+int atmel_ts_tk_keycode[] = {KEY_MENU, KEY_BACK};
 #endif
 
 struct touchscreen_t;
@@ -384,7 +378,7 @@ void keyarray_handler(uint8_t * atmel_msg)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] menu_button is pressed\n");
 #endif
-		input_report_key(tsp.inputdevice, 139, DEFAULT_PRESSURE_DOWN);
+		input_report_key(tsp.inputdevice, KEY_MENU, DEFAULT_PRESSURE_DOWN);
         	input_sync(tsp.inputdevice);    		
 		trigger_touchkey_led(1);
 	}
@@ -394,7 +388,7 @@ void keyarray_handler(uint8_t * atmel_msg)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] back_button is pressed\n");                
 #endif
-		input_report_key(tsp.inputdevice, 158, DEFAULT_PRESSURE_DOWN);                
+		input_report_key(tsp.inputdevice, KEY_BACK, DEFAULT_PRESSURE_DOWN);                
         	input_sync(tsp.inputdevice);    				
 		trigger_touchkey_led(2);
 	}
@@ -404,7 +398,7 @@ void keyarray_handler(uint8_t * atmel_msg)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] menu_button is released\n");                                
 #endif
-		input_report_key(tsp.inputdevice, 139, DEFAULT_PRESSURE_UP);     
+		input_report_key(tsp.inputdevice, KEY_MENU, DEFAULT_PRESSURE_UP);     
         	input_sync(tsp.inputdevice);    				
 		trigger_touchkey_led(3);
 	}
@@ -414,7 +408,7 @@ void keyarray_handler(uint8_t * atmel_msg)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] back_button is released\n");
 #endif
-		input_report_key(tsp.inputdevice, 158, DEFAULT_PRESSURE_UP); 
+		input_report_key(tsp.inputdevice, KEY_BACK, DEFAULT_PRESSURE_UP); 
         	input_sync(tsp.inputdevice);    				
 		trigger_touchkey_led(3);
 	}
@@ -899,8 +893,8 @@ static int __init touchscreen_probe(struct platform_device *pdev)
     {
         case LATONA:
         {
-            tsp.inputdevice->keybit[BIT_WORD(TOUCH_MENU)] |= BIT_MASK(TOUCH_MENU);
-            tsp.inputdevice->keybit[BIT_WORD(TOUCH_BACK)] |= BIT_MASK(TOUCH_BACK);
+            tsp.inputdevice->keybit[BIT_WORD(KEY_MENU)] |= BIT_MASK(KEY_MENU);
+            tsp.inputdevice->keybit[BIT_WORD(KEY_BACK)] |= BIT_MASK(KEY_BACK);
             tsp.inputdevice->keycode = atmel_ts_tk_keycode;
         	input_set_abs_params(tsp.inputdevice, ABS_MT_POSITION_X, 0, MAX_TOUCH_X_RESOLUTION, 0, 0);
         	input_set_abs_params(tsp.inputdevice, ABS_MT_POSITION_Y, 0, MAX_TOUCH_Y_RESOLUTION, 0, 0);
@@ -1043,7 +1037,7 @@ static int touchscreen_suspend(struct platform_device *pdev, pm_message_t state)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] menu_button force released\n");                                
 #endif
-		input_report_key(tsp.inputdevice, 139, DEFAULT_PRESSURE_UP);     
+		input_report_key(tsp.inputdevice, KEY_MENU, DEFAULT_PRESSURE_UP);     
         	input_sync(tsp.inputdevice);    				
 	}
 	if (back_button == 1)
@@ -1051,7 +1045,7 @@ static int touchscreen_suspend(struct platform_device *pdev, pm_message_t state)
 #if defined(CONFIG_SAMSUNG_KERNEL_DEBUG_USER)
 		printk(KERN_DEBUG "[TSP] back_button force released\n");
 #endif
-		input_report_key(tsp.inputdevice, 158, DEFAULT_PRESSURE_UP); 
+		input_report_key(tsp.inputdevice, KEY_BACK, DEFAULT_PRESSURE_UP); 
         	input_sync(tsp.inputdevice);    				
 	}
 
