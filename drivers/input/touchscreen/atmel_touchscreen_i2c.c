@@ -30,6 +30,8 @@
 
 #define __CONFIG_ATMEL__
 
+#define TSP_DEBUG 0
+
 #define I2C_M_WR 0	// ryun
 
 #ifdef __CONFIG_ATMEL__
@@ -77,12 +79,13 @@ static struct i2c_client *g_client;
 #endif
 
 #if 1
-extern unsigned int g_i2c_debugging_enable;
 
 int i2c_tsp_sensor_read(u16 reg, u8 *read_val, unsigned int len )
 {
-	int id;
-	int 	 err, i;
+	int id, err;
+#if TSP_DEBUG
+	int i;
+#endif
 	struct 	 i2c_msg msg[1];
 	unsigned char data[2];
 	
@@ -101,11 +104,8 @@ int i2c_tsp_sensor_read(u16 reg, u8 *read_val, unsigned int len )
 	
 
 	err = i2c_transfer(g_client->adapter, msg, 1);
-#if 1//for debug
-	if(g_i2c_debugging_enable == 1)
-	{
-		printk(KERN_DEBUG "[TSP][I2C] read addr[0] = 0x%x, addr[1] = 0x%x\n", data[0], data[1]);
-	}
+#if TSP_DEBUG
+	printk(KERN_DEBUG "[TSP][I2C] read addr[0] = 0x%x, addr[1] = 0x%x\n", data[0], data[1]);
 #endif
 
 	if (err >= 0) 
@@ -115,16 +115,13 @@ int i2c_tsp_sensor_read(u16 reg, u8 *read_val, unsigned int len )
 		msg->buf   = read_val;
 		err = i2c_transfer(g_client->adapter, msg, 1);
 
-#if 1//for debug
-		if(g_i2c_debugging_enable == 1)
+#if TSP_DEBUG
+		printk(KERN_DEBUG "[TSP][I2C] read data = ");
+		for(i=0 ; i<len ; i++)
 		{
-			printk(KERN_DEBUG "[TSP][I2C] read data = ");
-			for(i=0 ; i<len ; i++)
-			{
-				printk(KERN_DEBUG "%d(0x%x), ", msg->buf[i],  msg->buf[i]);
-			}
-			printk(KERN_DEBUG "// len = %d, rtn=%d\n",msg->len, err);
+			printk(KERN_DEBUG "%d(0x%x), ", msg->buf[i],  msg->buf[i]);
 		}
+		printk(KERN_DEBUG "// len = %d, rtn=%d\n",msg->len, err);
 #endif
 	}
 

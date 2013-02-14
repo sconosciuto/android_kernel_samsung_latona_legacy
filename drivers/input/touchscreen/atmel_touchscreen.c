@@ -80,11 +80,6 @@
 #include <linux/i2c/twl.h>	// ryun 20091125 
 #include <linux/earlysuspend.h>	// ryun 20200107 for early suspend
 
-#ifdef TOUCH_PROC
-#include <linux/proc_fs.h>
-#include <linux/uaccess.h>
-#endif
-
 #include "atmel_touch.h"
 
 #ifdef CONFIG_TOUCHKEY_LOCK
@@ -132,8 +127,6 @@ static int g_enable_touchscreen_handler = 0;	// fixed for i2c timeout error.
 //static unsigned int g_version_read_addr = 0;
 //static unsigned short g_position_read_addr = 0;
 
-#define IS_ATMEL	1	// ryun
-
 #define DRIVER_FILTER
 
 #define TOUCH_MENU	  KEY_MENU
@@ -166,32 +159,6 @@ void atmel_ts_early_suspend(struct early_suspend *h);
 void atmel_ts_late_resume(struct early_suspend *h);
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
-#ifdef FEATURE_MOVE_LIMIT
-int pre_x, pre_y, pre_size;
-#endif
-
-#ifdef TOUCH_PROC
-int touch_proc_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
-int touch_proc_read(char *page, char **start, off_t off,int count, int *eof, void *data);
-int touch_proc_write(struct file *file, const char __user *buffer, unsigned long count, void *data);
-
-#define IOCTL_TOUCH_PROC 'T'
-enum 
-{
-        TOUCH_GET_VERSION = _IOR(IOCTL_TOUCH_PROC, 0, char*),
-        TOUCH_GET_T_KEY_STATE = _IOR(IOCTL_TOUCH_PROC, 1, int),
-        TOUCH_GET_SW_VERSION = _IOR(IOCTL_TOUCH_PROC, 2, char*),
-};
-
-const char fw_version[10]="0X16";
-
-struct proc_dir_entry *touch_proc;
-struct file_operations touch_proc_fops = 
-{
-        .ioctl=touch_proc_ioctl,
-};
-#endif
-
 // [[ ryun 20100113 
 typedef struct
 {
@@ -215,40 +182,6 @@ static int prev_touch_count = 0;
 	input_mt_sync(tsp.inputdevice); }
 
 // ]] ryun 20100113 
-
-#ifdef ENABLE_NOISE_TEST_MODE
-extern ssize_t set_refer0_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer1_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer2_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer3_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer4_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer5_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_refer6_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta0_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta1_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta2_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta3_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta4_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta5_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t set_delta6_mode_show(struct device *dev, struct device_attribute *attr, char *buf);
-extern ssize_t threshold_show(struct device *dev, struct device_attribute *attr, char *buf);
-
-static DEVICE_ATTR(set_refer0, S_IRUGO, set_refer0_mode_show, NULL);
-static DEVICE_ATTR(set_delta0, S_IRUGO, set_delta0_mode_show, NULL);
-static DEVICE_ATTR(set_refer1, S_IRUGO, set_refer1_mode_show, NULL);
-static DEVICE_ATTR(set_delta1, S_IRUGO, set_delta1_mode_show, NULL);
-static DEVICE_ATTR(set_refer2, S_IRUGO, set_refer2_mode_show, NULL);
-static DEVICE_ATTR(set_delta2, S_IRUGO, set_delta2_mode_show, NULL);
-static DEVICE_ATTR(set_refer3, S_IRUGO, set_refer3_mode_show, NULL);
-static DEVICE_ATTR(set_delta3, S_IRUGO, set_delta3_mode_show, NULL);
-static DEVICE_ATTR(set_refer4, S_IRUGO, set_refer4_mode_show, NULL);
-static DEVICE_ATTR(set_delta4, S_IRUGO, set_delta4_mode_show, NULL);
-static DEVICE_ATTR(set_refer5, S_IRUGO, set_refer5_mode_show, NULL);
-static DEVICE_ATTR(set_delta5, S_IRUGO, set_delta5_mode_show, NULL);
-static DEVICE_ATTR(set_refer6, S_IRUGO, set_refer6_mode_show, NULL);
-static DEVICE_ATTR(set_delta6, S_IRUGO, set_delta6_mode_show, NULL);
-static DEVICE_ATTR(set_threshold, S_IRUGO, threshold_show, NULL);
-#endif /* ENABLE_NOISE_TEST_MODE */
 
 void read_func_for_only_single_touch(struct work_struct *work);
 void read_func_for_multi_touch(struct work_struct *work);
@@ -380,7 +313,6 @@ void set_touch_irq_gpio_init(void)
 	gpio_direction_input(OMAP_GPIO_TOUCH_INT);
 }
 
-// [[ ryun 20091203
 void set_touch_irq_gpio_disable(void)
 {
 	printk(KERN_DEBUG "[TSP] %s() \n", __FUNCTION__);
@@ -391,32 +323,16 @@ void set_touch_irq_gpio_disable(void)
 		g_enable_touchscreen_handler = 0;
 	}	
 }
-// ]] ryun 20091203
-
-unsigned char get_touch_irq_gpio_value(void)			
-{
-	//return gpio_get_value(GPIO_TOUCH_IRQ);
-	return gpio_get_value(OMAP_GPIO_TOUCH_INT);
-// ***********************************************************************
-// NOTE: HAL function: User adds/ writes to the body of this function
-// ***********************************************************************
-}
 
 #define U8	__u8
 #define  U16 	unsigned short int
 #define READ_MEM_OK                 1u
 
-
-extern unsigned int g_i2c_debugging_enable;
 extern U8 read_mem(U16 start, U8 size, U8 *mem);
 extern uint16_t message_processor_address;
 extern uint8_t max_message_length;
 extern uint8_t *atmel_msg;
-extern unsigned long simple_strtoul(const char *,char **,unsigned int);
 extern unsigned char g_version, g_build, qt60224_notfound_flag;
-
-
-/* firmware 2009.09.24 CHJ - end 1/2 */
 
 
 void disable_tsp_irq(void)
@@ -574,14 +490,6 @@ static void equalize_coordinate(bool detect, u8 id, u16 *px, u16 *py)
     tcount[id]++;
 }
 #endif  //DRIVER_FILTER
-
-#ifdef FEATURE_MOVE_LIMIT
-#define MOVE_LIMIT_SQUARE (150*150) // 100*100
-#define DISTANCE_SQUARE(X1, Y1, X2, Y2)    (((X2-X1)*(X2-X1))+((Y2-Y1)*(Y2-Y1)))
-
-int pre_x, pre_y, pre_size;
-
-#endif
 
 ////ryun 20100208 add
 extern void check_chip_calibration(unsigned char one_touch_input_flag);
@@ -769,14 +677,10 @@ void read_func_for_only_single_touch(struct work_struct *work)
 	struct touchscreen_t *ts = container_of(work,
 					struct touchscreen_t, tsp_work);
 
-//	g_i2c_debugging_enable = 0;
 	if(read_mem(message_processor_address, max_message_length, atmel_msg) == READ_MEM_OK)
 	{
-//		g_i2c_debugging_enable = 0;
-		
 		if(atmel_msg[0]<2 || atmel_msg[0]>11)
 		{
-			g_i2c_debugging_enable = 0;
 			printk("[TSP][ERROR] %s() - read fail \n", __FUNCTION__);
 			enable_irq(tsp.irq);
 			return ; 
@@ -811,23 +715,26 @@ void read_func_for_only_single_touch(struct work_struct *work)
 			input_report_key(tsp.inputdevice, BTN_TOUCH, DEFAULT_PRESSURE_DOWN);
 			input_report_abs(tsp.inputdevice, ABS_PRESSURE, DEFAULT_PRESSURE_DOWN);
 			input_sync(tsp.inputdevice);
+#if TSP_DEBUG
 			if(en_touch_log)
 			{
-				//printk("[TSP][DOWN] id=%d, x=%d, y=%d, press=%d \n",(int)atmel_msg[0], x480, y800, press);
+				printk("[TSP][DOWN] id=%d, x=%d, y=%d, press=%d \n",(int)atmel_msg[0], x480, y800, press);
 				en_touch_log = 0;
 			}
+#endif
 		}else if(press == 0)
 		{
 			input_report_key(tsp.inputdevice, BTN_TOUCH, DEFAULT_PRESSURE_UP	);
 			input_report_abs(tsp.inputdevice, ABS_PRESSURE, DEFAULT_PRESSURE_UP);
 			input_sync(tsp.inputdevice);
-			//printk("[TSP][UP] id=%d, x=%d, y=%d, press=%d \n",(int)atmel_msg[0], x480, y800, press);
+#if TSP_DEBUG
+			printk("[TSP][UP] id=%d, x=%d, y=%d, press=%d \n",(int)atmel_msg[0], x480, y800, press);
 			en_touch_log = 1;
+#endif
 		}
 //		ret_val = MESSAGE_READ_OK;
 	}else
 	{
-//		g_i2c_debugging_enable = 0;
 		printk("[TSP][ERROR] %s() - read fail \n", __FUNCTION__);
 	}
 //	PRINT_FUNCTION_EXIT;
@@ -856,10 +763,8 @@ void read_func_for_multi_touch(struct work_struct *work)
 					struct touchscreen_t, tsp_work);
 
 
-//	g_i2c_debugging_enable = 0;
 	if(read_mem(message_processor_address, max_message_length, atmel_msg) != READ_MEM_OK)
 	{
-//		g_i2c_debugging_enable = 0;
 		printk("[TSP][ERROR] %s() - read fail \n", __FUNCTION__);
 		enable_irq(tsp.irq);
 		return ;
@@ -897,8 +802,6 @@ void read_func_for_multi_touch(struct work_struct *work)
 	//{
        // handle_keyarray(atmel_msg);
 	//}
-
-//	g_i2c_debugging_enable = 0;
 
       //if( atmel_msg[0] >=2 && atmel_msg[0] <=11 )
       //{
@@ -952,10 +855,6 @@ int  enable_irq_handler(void)
 	return 0;
 }
 
-#ifdef ENABLE_NOISE_TEST_MODE
-extern struct class *sec_class;
-#endif
-
 static int __init touchscreen_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -966,11 +865,7 @@ static int __init touchscreen_probe(struct platform_device *pdev)
 	printk(KERN_DEBUG "[TSP] touchscreen_probe !! \n");
 	set_touch_irq_gpio_disable();	// ryun 20091203
 
-
-	if(IS_ATMEL)
-		printk(KERN_DEBUG "[TSP] atmel touch driver!! \n");
-	else
-		printk("[TSP][ERROR] unknown touch driver!! \n");
+	printk(KERN_DEBUG "[TSP] atmel touch driver!! \n");
 	
 	memset(&tsp, 0, sizeof(tsp));
 	
@@ -1095,47 +990,6 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 	}
 	/*------------------------------ for tunning ATmel - end ----------------------------*/
 
-#ifdef ENABLE_NOISE_TEST_MODE
-//	struct kobject *qt602240_noise_test;
-//	qt602240_noise_test = kobject_create_and_add("qt602240_noise_test", NULL);
-//	if (!qt602240_noise_test) {
-//		printk("Failed to create sysfs(qt602240_noise_test)!\n");
-//		return -ENOMEM;
-//	}
-	struct device *qt602240_noise_test = device_create(sec_class, NULL, 0, NULL, "qt602240_noise_test");
- 
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer0.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer0.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta0.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta0.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer1.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer1.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta1.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta1.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer2.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer2.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta2.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta2.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer3.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer3.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta3.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta3.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer4.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer4.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta4.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta4.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer5.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer5.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta5.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta5.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_refer6.attr)< 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_refer6.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_delta6.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_delta6.attr.name);
-	if (device_create_file(qt602240_noise_test, &dev_attr_set_threshold.attr) < 0)
-		printk("Failed to create device file(%s)!\n", dev_attr_set_threshold.attr.name);
-#endif
-
 	error = sysfs_create_file(ts_kobj,
 				  &bootcomplete_attr.attr);
 	if (error) {
@@ -1145,58 +999,12 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 
 // ]] This will create the touchscreen sysfs entry under the /sys directory
 
-#ifdef TOUCH_PROC
-	touch_proc = create_proc_entry("touch_proc", S_IFREG | S_IRUGO | S_IWUGO, 0);
-	if (touch_proc)
-	{
-		touch_proc->proc_fops = &touch_proc_fops;
-		printk(" succeeded in initializing touch proc file\n");
-	}
-	else
-	{
-	        printk(" error occured in initializing touch proc file\n");
-	}
-#endif
 	printk(KERN_DEBUG "[TSP] success probe() !\n");
 
 	return 0;
 }
 
-#ifdef TOUCH_PROC
-int touch_proc_ioctl(struct inode *p_node, struct file *p_file, unsigned int cmd, unsigned long arg)
-{
-        switch(cmd)
-        {
-                case TOUCH_GET_VERSION :
-                {
-                        char fv[10];
 
-                        sprintf(fv,"0X%x", g_version);
-                        if(copy_to_user((void*)arg, (const void*)fv, sizeof(fv)))
-                          return -EFAULT;
-                }
-                break;
-
-                case TOUCH_GET_T_KEY_STATE :
-                {
-                        int key_short = 0;
-
-                        key_short = menu_button || back_button;
-                        if(copy_to_user((void*)arg, (const void*)&key_short, sizeof(int)))
-                          return -EFAULT;
-                
-                }
-                break;
-                case TOUCH_GET_SW_VERSION :
-                {
-                        if(copy_to_user((void*)arg, (const void*)fw_version, sizeof(fw_version)))
-                          return -EFAULT;
-                }
-                break;                
-        }
-        return 0;
-}
-#endif
 static int touchscreen_remove(struct platform_device *pdev)
 {
 

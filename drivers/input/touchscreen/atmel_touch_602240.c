@@ -75,7 +75,6 @@ extern	void set_touch_i2c_gpio_init(void);
 extern void set_touch_irq_gpio_init(void);
 extern void set_touch_irq_gpio_disable(void);		// ryun 20091202
 extern int  enable_irq_handler(void);
-extern unsigned char get_touch_irq_gpio_value(void);
 extern void clear_touch_history(void);
 
 extern uint8_t read_boot_state(u8 *data);
@@ -84,8 +83,6 @@ extern uint8_t boot_write_mem(uint16_t ByteCount, unsigned char * Data );
 
 extern void disable_tsp_irq(void);
 extern void enable_tsp_irq(void);
-
-unsigned int g_i2c_debugging_enable=0;
 
 extern const unsigned char fw_bin_version;
 extern const unsigned char fw_bin_build;
@@ -2020,8 +2017,6 @@ void read_all_register(void)
 				printk("%2d : ", addr+1);
 			}
 
-//			if(get_touch_irq_gpio_value() == 1)
-//				printk("\n\n[TSP] find !!! 0x%x \n\n", (int)addr);
 		}else
 		{
 			printk("\n\n[TSP][ERROR] %s() read fail !! \n", __FUNCTION__);
@@ -2063,7 +2058,6 @@ uint8_t get_message(void)
       if (driver_setup == DRIVER_SETUP_OK)
       {
 
-//	g_i2c_debugging_enable = 1;
          if(read_mem(message_processor_address, max_message_length, atmel_msg) == READ_MEM_OK)
          {
 	      object_type = report_id_to_type(atmel_msg[0], &instance);
@@ -2089,7 +2083,6 @@ uint8_t get_message(void)
 		};
             ret_val = MESSAGE_READ_OK;
          }
-//	g_i2c_debugging_enable = 0;
       }
       read_in_progress = 0;
    }
@@ -3236,7 +3229,7 @@ U8 read_changeline(void)
 {
     //return(gpio_get_pin_value(CHANGELINE));
 #ifdef __CONFIG_SAMSUNG__
-    return get_touch_irq_gpio_value();
+    return gpio_get_value(OMAP_GPIO_TOUCH_INT);
 #endif
 
 }
