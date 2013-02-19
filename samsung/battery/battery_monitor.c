@@ -50,6 +50,8 @@
 #define SEL_MADC_MCPC       0x08
 //#define _OMS_FEATURES_ // CHINA BORQS CONCEPTS
 
+#define EVENT_LOGGING 0
+
 static DEFINE_MUTEX( battery_lock );
 
 static int NCP15WB473_batt_table[] = 
@@ -156,7 +158,9 @@ static int samsung_battery_get_property( struct power_supply *, enum power_suppl
 static int samsung_ac_get_property( struct power_supply *, enum power_supply_property, union power_supply_propval * );
 static int samsung_usb_get_property( struct power_supply *, enum power_supply_property, union power_supply_propval * );
 static void samsung_pwr_external_power_changed( struct power_supply * );
+#if EVENT_LOGGING
 static ssize_t store_event(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t size);
+#endif
 
 static int __devinit battery_probe( struct platform_device * );
 static int __devexit battery_remove( struct platform_device * );
@@ -266,6 +270,7 @@ static struct kobj_attribute batt_vol_toolow =
 
 
 static struct kobj_attribute batt_sysfs_testmode[] = {
+#if EVENT_LOGGING
 	/* Event logging - Put these attributes at first position of this array 
        For using the call back function 'store_event'
 	*/
@@ -285,6 +290,7 @@ static struct kobj_attribute batt_sysfs_testmode[] = {
 	__ATTR( browser, 0664, NULL, store_event ), 
     __ATTR( game, 0664, NULL, store_event ), 
     /* END of Event logging */
+#endif
 
     __ATTR( batt_vol, 0644, show_batt_vol, NULL ),
     __ATTR( batt_vol_adc, 0644, show_batt_vol_adc, NULL ),
@@ -300,6 +306,7 @@ static struct kobj_attribute batt_sysfs_testmode[] = {
     __ATTR( charging_source, 0644, show_charging_source, NULL ), 
 };
 
+#if EVENT_LOGGING
 /* Event logging */
 u32 event_logging = 0;
 
@@ -327,6 +334,7 @@ static ssize_t store_event(struct kobject *kobj,
 }
 
 /* END of Event logging */
+#endif
 
 static ssize_t store_work_delay(struct kobject *kobj,
                     struct kobj_attribute *attr,
@@ -878,12 +886,14 @@ static int battery_monitor_core( bool is_sleep )
     int charging_time;
 	int rechg_voltage;
 
+#if EVENT_LOGGING
 	if(event_logging)
 	{
 		stop_temperature_overheat = CHARGE_STOP_TEMPERATURE_EVENT;
 		recover_temperature_overheat = CHARGE_RECOVER_TEMPERATURE_EVENT;
 	}
 	else
+#endif
 	{
 		stop_temperature_overheat = CHARGE_STOP_TEMPERATURE_MAX;
 		recover_temperature_overheat = CHARGE_RECOVER_TEMPERATURE_MAX;	
