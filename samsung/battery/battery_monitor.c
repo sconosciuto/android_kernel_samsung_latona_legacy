@@ -197,7 +197,7 @@ extern u32 sec_bootmode;
 int stop_temperature_overheat = CHARGE_STOP_TEMPERATURE_MAX;
 int recover_temperature_overheat = CHARGE_RECOVER_TEMPERATURE_MAX;
 
-static unsigned int work_delay = 1500;
+static unsigned int work_delay = 2000;
 
 #ifdef CONFIG_SEC_BATTERY_USE_RECOVERY_MODE
 static int recovery_mode = 0;
@@ -1087,6 +1087,7 @@ static void battery_monitor_work_handler( struct work_struct *work )
     power_supply_changed( &di->sec_ac );
     power_supply_changed( &di->sec_usb );
 
+    msleep(work_delay);
     wake_unlock(&sec_bc_wakelock);
 
 }
@@ -1573,10 +1574,7 @@ static int battery_resume( struct platform_device *pdev )
 
     sec_bci.charger.full_charge_dur_sleep = 0x0;
 
-    if(sec_bci.charger.is_charging)
-        queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ);
-    else
-        queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, msecs_to_jiffies(work_delay));
+    queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_monitor_work, HZ);
     queue_delayed_work(sec_bci.sec_battery_workq, &di->battery_polling_work, sec_bci.battery.monitor_duration * HZ); 
 
     return 0;
