@@ -208,7 +208,9 @@ static OMAP_GPIO_I2C_CLIENT * Si4709_i2c_client;
 /**********************************************/
 static void wait(void);
 
+#ifndef RDS_INTERRUPT_ON_ALWAYS
 static void wait_RDS(void );
+#endif
 
 static int powerup(void);
 static int powerdown(void);
@@ -2465,12 +2467,14 @@ static void wait(void)
 	//mutex_lock(&(Si4709_dev.lock));   //changoh.heo 2010.11.12
 }
 
+#ifndef RDS_INTERRUPT_ON_ALWAYS
 static void wait_RDS(void)
 {
 	printk("fmradio : wait_RDS_event_interruptible\n");
    wait_event_interruptible_timeout(Si4709_waitq, 
   	(Si4709_dev_wait_flag == WAIT_OVER),Si4709_dev.settings.timeout_RDS);
 }
+#endif
 
 /*i2c read function*/
 /*Si4709_dev.client should be set before calling this function.
@@ -2486,7 +2490,6 @@ static int i2c_read( u8 reg )
 	int msglen = 0, ret = 0;
 #if defined(CONFIG_FMRADIO_USE_GPIO_I2C)
 	OMAP_GPIO_I2C_RD_DATA i2c_rd_param;
-	u8 reg_addr_0 = 0x0;
 #endif	
 
 	for(idx = 0; idx < NUM_OF_REGISTERS * 2; idx++)
@@ -2556,7 +2559,7 @@ static int i2c_read( u8 reg )
    be called*/
    
 #if defined(CONFIG_FMRADIO_USE_GPIO_I2C)
-static int GP_i2c_write( unsigned char *buf, u8 len )
+static int GP_i2c_write( const char *buf, u8 len )
 {
 	OMAP_GPIO_I2C_WR_DATA i2c_wr_param;
 
