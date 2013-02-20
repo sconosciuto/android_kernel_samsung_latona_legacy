@@ -49,6 +49,7 @@
 #define delay_to_jiffies(d)                                       ((d)?msecs_to_jiffies(d):1)
 #define actual_delay(d)                               (jiffies_to_msecs(delay_to_jiffies(d)))
 
+
 /* ---------------------------------------------------------------------------------------- *
    Function prototype declaration
  * ---------------------------------------------------------------------------------------- */
@@ -102,8 +103,6 @@ static int yas_acc_resume(OMAP_GPIO_I2C_CLIENT *client);
 static void yas_acc_work_func(struct work_struct *);
 //static int yas_acc_probe(struct i2c_client *, const struct i2c_device_id *);
 //static int yas_acc_remove(struct i2c_client *);
-static int yas_acc_suspend(OMAP_GPIO_I2C_CLIENT *client, pm_message_t);
-static int yas_acc_resume(OMAP_GPIO_I2C_CLIENT *client);
 
 /* ---------------------------------------------------------------------------------------- *
    Driver private data
@@ -117,7 +116,7 @@ struct yas_acc_private_data {
     struct yas_acc_driver *driver;
     struct delayed_work work;
     struct yas_acc_data last;
-#if 1//DEBUG	
+#if DEBUG
     int suspend;
     int suspend_enable;
 #endif	
@@ -909,6 +908,7 @@ static int bma222_early_suspend(struct early_suspend *handler)
 }
 #endif
 
+#if DEBUG
 static int yas_acc_suspend(OMAP_GPIO_I2C_CLIENT *client, pm_message_t mesg)
 {
 /*    struct yas_acc_private_data *data =yas_acc_get_data();
@@ -929,6 +929,7 @@ static int yas_acc_suspend(OMAP_GPIO_I2C_CLIENT *client, pm_message_t mesg)
 */
     return 0;
 }
+#endif
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 static int bma222_early_resume(struct early_suspend *handler)
@@ -955,6 +956,7 @@ static int bma222_early_resume(struct early_suspend *handler)
 }
 #endif
 
+#if DEBUG
 static int yas_acc_resume(OMAP_GPIO_I2C_CLIENT *client)
 {
  /*   struct yas_acc_private_data *data =yas_acc_get_data();
@@ -976,6 +978,7 @@ static int yas_acc_resume(OMAP_GPIO_I2C_CLIENT *client)
 */
     return 0;
 }
+#endif
 
 extern struct class *sensors_class;
 extern int sensors_register(struct device *dev, void * drvdata, struct device_attribute *attributes[], char *name);
