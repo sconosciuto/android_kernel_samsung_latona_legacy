@@ -207,7 +207,7 @@ obj-$(CONFIG_MACH_OMAP_SAMSUNG)		+= omap3-gptimer12.o \
 					   omap34xx-padext.o \
 					   sec_common.o \
 					   sec_mux.o \
-					   $(shell printf "%s.o" $(OMAP_SAMSUNG_MUX_FILE_NAME))
+					   mux_latona_rev_r08.o
 
 obj-$(CONFIG_MACH_SAMSUNG_LATONA)	+= board-latona.o \
                                            board-latona-display.o \

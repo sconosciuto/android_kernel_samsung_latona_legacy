@@ -89,7 +89,7 @@ CONFIG_NAMESPACES=y
 # CONFIG_PID_NS is not set
 # CONFIG_NET_NS is not set
 CONFIG_BLK_DEV_INITRD=y
-CONFIG_INITRAMFS_SOURCE="usr/latona_initramfs.list"
+CONFIG_INITRAMFS_SOURCE="source/usr/latona_initramfs.list"
 CONFIG_INITRAMFS_ROOT_UID="squash"
 CONFIG_INITRAMFS_ROOT_GID="squash"
 CONFIG_RD_GZIP=y

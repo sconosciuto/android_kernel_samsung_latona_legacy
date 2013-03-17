@@ -229,7 +229,11 @@ KBUILD_CPPFLAGS += $(patsubst %,-I$(srctree)/%include,$(machdirs) $(platdirs))
 endif
 
 # OMAP-Samsung custom build-configurations
--include arch/arm/mach-omap2/samsung.mk
+#-include arch/arm/mach-omap2/samsung.mk
+ifdef CONFIG_MACH_SAMSUNG_LATONA
+KBUILD_CFLAGS += -include $(srctree)/$(platdirs)/include/plat/mux_latona_rev_r08.h \
+		 -D_SAMSUNG_BOARD_NAME=$(CONFIG_SAMSUNG_BOARD_NAME)
+endif
 
 export	TEXT_OFFSET GZFLAGS MMUEXT
 
