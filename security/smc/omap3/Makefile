@@ -52,5 +52,8 @@ smc_driver-objs += scx_public_crypto_DES.o
 smc_driver-objs += scx_public_dma.o
 smc_driver-objs += bridge_pub2sec.o
 
+plus_sec := $(call as-instr,.arch_extension sec,+sec)
+AFLAGS_bridge_pub2sec.o			:=-Wa,-march=armv7-a$(plus_sec)
+
 obj-$(CONFIG_SECURITY_MIDDLEWARE_COMPONENT) += smc_driver.o
 
