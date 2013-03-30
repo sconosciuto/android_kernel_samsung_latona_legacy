@@ -26,14 +26,8 @@
 #include <linux/blkdev.h>
 #include <linux/backing-dev.h>
 #include <linux/buffer_head.h>
+#include <linux/tracepoint.h>
 #include "internal.h"
-
-#define inode_to_bdi(inode)	((inode)->i_mapping->backing_dev_info)
-
-/*
- * We don't actually have pdflush, but this one is exported though /proc...
- */
-int nr_pdflush_threads;
 
 /*
  * Passed into wb_writeback(), essentially a subset of writeback_control
@@ -50,6 +44,21 @@ struct wb_writeback_work {
 	struct completion *done;	/* set if the caller waits */
 };
 
+/*
+ * Include the creation of the trace points after defining the
+ * wb_writeback_work structure so that the definition remains local to this
+ * file.
+ */
+#define CREATE_TRACE_POINTS
+#include <trace/events/writeback.h>
+
+#define inode_to_bdi(inode)	((inode)->i_mapping->backing_dev_info)
+
+/*
+ * We don't actually have pdflush, but this one is exported though /proc...
+ */
+int nr_pdflush_threads;
+
 /**
  * writeback_in_progress - determine whether there is writeback in progress
  * @bdi: the device's backing_dev_info structure.
@@ -65,6 +74,8 @@ int writeback_in_progress(struct backing_dev_info *bdi)
 static void bdi_queue_work(struct backing_dev_info *bdi,
 		struct wb_writeback_work *work)
 {
+	trace_writeback_queue(bdi, work);
+
 	spin_lock(&bdi->wb_lock);
 	list_add_tail(&work->list, &bdi->work_list);
 	spin_unlock(&bdi->wb_lock);
@@ -73,9 +84,10 @@ static void bdi_queue_work(struct backing_dev_info *bdi,
 	 * If the default thread isn't there, make sure we add it. When
 	 * it gets created and wakes up, we'll run this work.
 	 */
-	if (unlikely(list_empty_careful(&bdi->wb_list)))
+	if (unlikely(!bdi->wb.task)) {
+		trace_writeback_nothread(bdi, work);
 		wake_up_process(default_backing_dev_info.wb.task);
-	else {
+	} else {
 		struct bdi_writeback *wb = &bdi->wb;
 
 		if (wb->task)
@@ -95,8 +107,10 @@ __bdi_start_writeback(struct backing_dev_info *bdi, long nr_pages,
 	 */
 	work = kzalloc(sizeof(*work), GFP_ATOMIC);
 	if (!work) {
-		if (bdi->wb.task)
+		if (bdi->wb.task) {
+			trace_writeback_nowork(bdi);
 			wake_up_process(bdi->wb.task);
+		}
 		return;
 	}
 
@@ -751,6 +765,8 @@ long wb_do_writeback(struct bdi_writeback *wb, int force_wait)
 		if (force_wait)
 			work->sync_mode = WB_SYNC_ALL;
 
+		trace_writeback_exec(bdi, work);
+
 		wrote += wb_writeback(wb, work);
 
 		/*
@@ -775,14 +791,42 @@ long wb_do_writeback(struct bdi_writeback *wb, int force_wait)
  * Handle writeback of dirty data for the device backed by this bdi. Also
  * wakes up periodically and does kupdated style flushing.
  */
-int bdi_writeback_task(struct bdi_writeback *wb)
+int bdi_writeback_thread(void *data)
 {
+	struct bdi_writeback *wb = data;
+	struct backing_dev_info *bdi = wb->bdi;
 	unsigned long last_active = jiffies;
 	unsigned long wait_jiffies = -1UL;
 	long pages_written;
 
+	/*
+	 * Add us to the active bdi_list
+	 */
+	spin_lock_bh(&bdi_lock);
+	list_add_rcu(&bdi->bdi_list, &bdi_list);
+	spin_unlock_bh(&bdi_lock);
+
+	current->flags |= PF_FLUSHER | PF_SWAPWRITE;
+	set_freezable();
+
+	/*
+	 * Our parent may run at a different priority, just set us to normal
+	 */
+	set_user_nice(current, 0);
+
+	/*
+	 * Clear pending bit and wakeup anybody waiting to tear us down
+	 */
+	clear_bit(BDI_pending, &bdi->state);
+	smp_mb__after_clear_bit();
+	wake_up_bit(&bdi->state, BDI_pending);
+
+	trace_writeback_thread_start(bdi);
+
 	while (!kthread_should_stop()) {
 		pages_written = wb_do_writeback(wb, 0);
+
+		trace_writeback_pages_written(pages_written);
 
 		if (pages_written)
 			last_active = jiffies;
@@ -791,7 +835,7 @@ int bdi_writeback_task(struct bdi_writeback *wb)
 
 			/*
 			 * Longest period of inactivity that we tolerate. If we
-			 * see dirty data again later, the task will get
+			 * see dirty data again later, the thread will get
 			 * recreated automatically.
 			 */
 			max_idle = max(5UL * 60 * HZ, wait_jiffies);
@@ -813,8 +857,19 @@ int bdi_writeback_task(struct bdi_writeback *wb)
 		try_to_freeze();
 	}
 
+	wb->task = NULL;
+
+	/*
+	 * Flush any work that raced with us exiting. No new work
+	 * will be added, since this bdi isn't discoverable anymore.
+	 */
+	if (!list_empty(&bdi->work_list))
+		wb_do_writeback(wb, 1);
+
+	trace_writeback_thread_stop(bdi);
 	return 0;
 }
+
 
 /*
  * Start writeback of `nr_pages' pages.  If `nr_pages' is zero, write back

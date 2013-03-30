@@ -45,14 +45,12 @@ enum bdi_stat_item {
 #define BDI_STAT_BATCH (8*(1+ilog2(nr_cpu_ids)))
 
 struct bdi_writeback {
-	struct list_head list;			/* hangs off the bdi */
-
 	struct backing_dev_info *bdi;		/* our parent bdi */
 	unsigned int nr;
 
 	unsigned long last_old_flush;		/* last old data flush */
 
-	struct task_struct	*task;		/* writeback task */
+	struct task_struct	*task;		/* writeback thread */
 	struct list_head	b_dirty;	/* dirty inodes */
 	struct list_head	b_io;		/* parked for writeback */
 	struct list_head	b_more_io;	/* parked for more writeback */
@@ -60,7 +58,6 @@ struct bdi_writeback {
 
 struct backing_dev_info {
 	struct list_head bdi_list;
-	struct rcu_head rcu_head;
 	unsigned long ra_pages;	/* max readahead in PAGE_CACHE_SIZE units */
 	unsigned long state;	/* Always use atomic bitops on this */
 	unsigned int capabilities; /* Device capabilities */
@@ -80,8 +77,7 @@ struct backing_dev_info {
 	unsigned int max_ratio, max_prop_frac;
 
 	struct bdi_writeback wb;  /* default writeback info for this bdi */
-	spinlock_t wb_lock;	  /* protects update side of wb_list */
-	struct list_head wb_list; /* the flusher threads hanging off this bdi */
+	spinlock_t wb_lock;	  /* protects work_list */
 
 	struct list_head work_list;
 
@@ -105,7 +101,7 @@ void bdi_unregister(struct backing_dev_info *bdi);
 int bdi_setup_and_register(struct backing_dev_info *, char *, unsigned int);
 void bdi_start_writeback(struct backing_dev_info *bdi, long nr_pages);
 void bdi_start_background_writeback(struct backing_dev_info *bdi);
-int bdi_writeback_task(struct bdi_writeback *wb);
+int bdi_writeback_thread(void *data);
 int bdi_has_dirty_io(struct backing_dev_info *bdi);
 void bdi_arm_supers_timer(void);
 
