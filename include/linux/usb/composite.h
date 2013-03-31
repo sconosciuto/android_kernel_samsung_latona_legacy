@@ -360,14 +360,6 @@ struct usb_composite_dev {
 	/* used by usb_composite_force_reset to avoid signalling switch changes */
 	bool				mute_switch;
 	struct work_struct switch_work;
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-/* soonyong.cho : Below values are used for samsung composite framework. */
-	unsigned int			product_num; 	/* product number (ex : 0, 1, 2, ..) */
-	struct android_usb_product 	*products;	/* products list */
-#endif
-#ifdef CONFIG_USB_ANDROID_ACCESSORY
-	unsigned char	accessory_mode;		/* usb accessory mode */
-#endif
 };
 
 extern int usb_string_id(struct usb_composite_dev *c);
