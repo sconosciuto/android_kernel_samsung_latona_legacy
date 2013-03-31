@@ -261,6 +261,7 @@ __ATTR_SHOW_CALLBACK( show_batt_monitor_temp, get_batt_monitor_temp() )
 __ATTR_SHOW_CALLBACK( show_batt_temp_check, sec_bci.battery.battery_health)
 __ATTR_SHOW_CALLBACK( show_batt_full_check, (sec_bci.charger.charge_status == POWER_SUPPLY_STATUS_FULL)?1:0)
 __ATTR_SHOW_CALLBACK( show_charging_source, sec_bci.charger.cable_status )
+__ATTR_SHOW_CALLBACK( show_batt_chg_current, _get_t2adc_data_(8) )
 
 #ifdef _OMS_FEATURES_
 __ATTR_SHOW_CALLBACK( show_batt_vol_toolow, sec_bci.battery.battery_vol_toolow )
@@ -304,6 +305,7 @@ static struct kobj_attribute batt_sysfs_testmode[] = {
     __ATTR( batt_temp_check, 0644, show_batt_temp_check, NULL ),
     __ATTR( batt_full_check, 0644, show_batt_full_check, NULL ),    
     __ATTR( charging_source, 0644, show_charging_source, NULL ), 
+    __ATTR( batt_chg_current, 0644, show_batt_chg_current, NULL ),
 };
 
 #if EVENT_LOGGING
