@@ -34,6 +34,9 @@
 #include <linux/gpio.h>
 #include <linux/bootmem.h>
 #include <linux/reboot.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/mm.h>
 
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -48,6 +51,7 @@
 #include <plat/timer-gp.h>
 #include <plat/mux.h>
 #include <plat/display.h>
+#include <plat/io.h>
 
 #include "mux.h"
 //#include "sdram-hynix-h8mbx00u0mer-0em.h"
@@ -558,6 +562,45 @@ static int __init latona_opp_init(void)
 	return 0;
 }
 device_initcall(latona_opp_init);
+
+/*
+* Android expects the bootloader to pass the device serial number as a
+* parameter on the kernel command line.
+* Use the last 16 bytes of the DIE id as device serial number.
+*/
+#define DIE_ID_REG_BASE		(L4_WK_34XX_PHYS + 0xA000)
+#define DIE_ID_REG_OFFSET	0x218
+
+#define SERIALNO_PARAM		"androidboot.serialno"
+static int __init latona_cmdline_set_serialno(void)
+{
+	unsigned int val[2] = { 0 };
+	unsigned int reg;
+
+	reg = DIE_ID_REG_BASE + DIE_ID_REG_OFFSET;
+
+	val[0] = omap_readl(reg);
+	val[1] = omap_readl(reg + 0x4);
+
+	/*
+	 * The final cmdline will have 16 digits, a space, an =, and a trailing
+	 * \0 as well as the contents of saved_command_line and SERIALNO_PARAM
+	*/
+	size_t len = strlen(saved_command_line) + strlen(SERIALNO_PARAM) + 19;
+	char *buf = kmalloc(len, GFP_ATOMIC);
+	if (buf) {
+		snprintf(buf, len, "%s %s=%08X%08X",
+			saved_command_line,
+			SERIALNO_PARAM,
+			val[1], val[0]);
+		/* XXX This leaks strlen(saved_command_line) bytes of memory
+		 * Do we care? */
+		saved_command_line = buf;
+	}
+
+	return 0;
+}
+device_initcall(latona_cmdline_set_serialno);
 
 MACHINE_START(LATONA, "LATONA")
     .phys_io = 0x48000000,
