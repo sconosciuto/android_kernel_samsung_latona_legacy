@@ -564,14 +564,15 @@ static int __init latona_opp_init(void)
 device_initcall(latona_opp_init);
 
 /*
-* Android expects the bootloader to pass the device serial number as a
-* parameter on the kernel command line.
+* Android expects the bootloader to pass the device serial number and
+* the name of the board as parameters on the kernel command line.
 * Use the last 16 bytes of the DIE id as device serial number.
 */
 #define DIE_ID_REG_BASE		(L4_WK_34XX_PHYS + 0xA000)
 #define DIE_ID_REG_OFFSET	0x218
 
 #define SERIALNO_PARAM		"androidboot.serialno"
+#define HARDWARE_PARAM		"androidboot.hardware=latona"
 static int __init latona_cmdline_set_serialno(void)
 {
 	unsigned int val[2] = { 0 };
@@ -583,16 +584,19 @@ static int __init latona_cmdline_set_serialno(void)
 	val[1] = omap_readl(reg + 0x4);
 
 	/*
-	 * The final cmdline will have 16 digits, a space, an =, and a trailing
-	 * \0 as well as the contents of saved_command_line and SERIALNO_PARAM
+	 * The final cmdline will have 16 digits, two spaces, an =, and a trailing
+	 * \0 as well as the contents of saved_command_line, SERIALNO_PARAM
+	 * and HARDWARE_PARAM
 	*/
-	size_t len = strlen(saved_command_line) + strlen(SERIALNO_PARAM) + 19;
+	size_t len = strlen(saved_command_line) + strlen(SERIALNO_PARAM)
+				+ 20 + strlen(HARDWARE_PARAM);
 	char *buf = kmalloc(len, GFP_ATOMIC);
 	if (buf) {
-		snprintf(buf, len, "%s %s=%08X%08X",
+		snprintf(buf, len, "%s %s=%08X%08X %s",
 			saved_command_line,
 			SERIALNO_PARAM,
-			val[1], val[0]);
+			val[1], val[0],
+			HARDWARE_PARAM);
 		/* XXX This leaks strlen(saved_command_line) bytes of memory
 		 * Do we care? */
 		saved_command_line = buf;
@@ -602,7 +606,7 @@ static int __init latona_cmdline_set_serialno(void)
 }
 device_initcall(latona_cmdline_set_serialno);
 
-MACHINE_START(LATONA, "LATONA")
+MACHINE_START(LATONA, "SAMSUNG LATONA")
     .phys_io = 0x48000000,
     .io_pg_offst = ((0xfa000000) >> 18) & 0xfffc,
     .boot_params = 0x80000100,
