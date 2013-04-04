@@ -1,4 +1,4 @@
-obj-m := samsung_battery.o
+obj-$(CONFIG_SAMSUNG_BATTERY) := samsung_battery.o
 samsung_battery-y :=
 ifeq ($(CONFIG_MACH_SAMSUNG_LATONA),y)
 samsung_battery-y += battery_monitor.o
