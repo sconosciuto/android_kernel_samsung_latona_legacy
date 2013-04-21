@@ -4683,6 +4683,7 @@ int set_tsp_for_ta_detect(int state)
 	uint8_t status;
 	uint8_t object_size;
 	static uint8_t tchthr_old = 32;
+	static int boot_complete = 0;
 
 	if(qt60224_notfound_flag == 1)
 	{
@@ -4720,9 +4721,15 @@ int set_tsp_for_ta_detect(int state)
 	if (down_interruptible(&g_tsp_mutex)) 
 		return -ERESTARTSYS;
 
+	if (is_boot_state == 0 && !boot_complete)
+		boot_complete = 1;
+
 	if(state)
 	{
-		tchthr_old = config_normal.touchscreen_config.tchthr;
+		//consider the changes of tchthr valid only only after the execution of bootcomplete()
+		if (boot_complete)
+			tchthr_old = config_normal.touchscreen_config.tchthr;
+
 		config_normal.touchscreen_config.tchthr = 50; //touchscreen_config.tchthr = 70;
 		config_normal.noise_suppression_config.noisethr = 20; //noise_suppression_config.noisethr = 20;		   
 
