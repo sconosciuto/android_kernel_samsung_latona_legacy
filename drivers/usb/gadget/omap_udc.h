@@ -5,6 +5,74 @@
  * 2004 (C) David Brownell
  */
 
+#include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
+
+ #define CSY_CRESPO	/* This definition refered crespo model for power control. */
+/* soonyong.cho : If you use usb host, you must not control otg clock 
+ *		  when usb switch call function as s3c_change_usb_mode.
+ *		  SYS.LSI said that host phy uses otg clock.
+ */
+/*#define CSY_CONTROL_OTG_CLOCK */
+#ifdef CSY_CRESPO
+/* ------------------------------------------------------------------------------------------
+ * If you want enable udc when you boot device, you should enable below definition.
+ * Written by SoonYong,Cho (Tue 9, Nov 2010)
+ */
+#  ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+  /* This composite need to disable udc when device booting time because of to reduce reconfig usb */
+#  else
+#    define CSY_UDC_ENABLE_IN_USB_GADGET_REGISTER_DRIVER
+#  endif
+#  define USE_USB_LDO_CONTROL 	/* This definition is for LDO control. */
+#  include <linux/regulator/consumer.h>
+/* soonyong.cho : C1 uses HSIC for to communicate to CP. So we don't disable usb ldo. */
+#  define CSY_DO_NOT_DISABLE_USB_LDO
+#endif
+/*
+ * ------------------------------------------------------------------------------------------
+ * Debugging macro and defines
+ */
+/*#define CSY_DEBUG */
+/* #define CSY_DEBUG2 */
+#define CSY_DEBUG_ESS
+/* #define CSY_MORE_DEBUG */
+
+#ifdef CSY_DEBUG
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG */
+
+#ifdef CSY_DEBUG2
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG2(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG2(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG2(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG2 */
+
+#ifdef CSY_DEBUG_ESS
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG_ESS(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG_ESS(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG_ESS(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG_ESS */
+
+#ifdef CSY_DEBUG
+#undef DBG
+#  define DBG(devvalue, fmt, args...) \
+	printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#endif
 
 /*
  * USB device/endpoint management registers
@@ -178,6 +246,12 @@ struct omap_udc {
 	struct clk			*dc_clk;
 	struct clk			*hhc_clk;
 	unsigned			clk_requested:1;
+	
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE /* below value is used for to check host mode */
+	atomic_t usb_status;
+	int	(*get_usb_mode)(void);
+	int	(*change_usb_mode)(int mode);
+#endif
 };
 
 /*-------------------------------------------------------------------------*/
