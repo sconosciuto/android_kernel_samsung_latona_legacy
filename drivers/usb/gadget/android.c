@@ -600,7 +600,7 @@ void android_enable_function(struct usb_function *f, int enable)
 #endif //CONFIG_USB_ANDROID_ACCESSORY	
 	}
 	else { /* for disable : Return old mode. If Non-GED model changes policy, below code has to be modified. */
-		if (!strcmp(f->name, "accessory") && dev->debugging_usb_mode)
+		if ((!strcmp(f->name, "accessory") || !strcmp(f->name, "rndis")) && dev->debugging_usb_mode)
 			ret = set_product(dev, USBSTATUS_ADB);
 		else
 			ret = set_product(dev, dev->current_usb_mode);
