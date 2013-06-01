@@ -250,6 +250,7 @@ static struct android_usb_product usb_products[] = {
 		.s		= ANDROID_DEBUG_CONFIG_STRING,
 		.mode		= USBSTATUS_ADB,
 	},
+#if 0
 	{
 		.product_id	= SAMSUNG_KIES_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums_acm),
@@ -260,6 +261,7 @@ static struct android_usb_product usb_products[] = {
 		.s		= ANDROID_KIES_CONFIG_STRING,
 		.mode		= USBSTATUS_SAMSUNG_KIES,
 	},
+#endif
 	{
 		.product_id	= SAMSUNG_UMS_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums),
