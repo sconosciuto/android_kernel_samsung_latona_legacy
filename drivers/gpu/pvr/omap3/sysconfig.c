@@ -52,6 +52,8 @@ static PVRSRV_DEVICE_NODE *gpsSGXDevNode;
 
 #define DEVICE_SGX_INTERRUPT (1 << 0)
 
+extern uint sgx_apm_latency;
+
 #if defined(NO_HARDWARE)
 static IMG_CPU_VIRTADDR gsSGXRegsCPUVAddr;
 #endif
@@ -380,7 +382,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #else
 	psTimingInfo->bEnableActivePM = IMG_FALSE;
 #endif
-	psTimingInfo->ui32ActivePowManLatencyms = SYS_SGX_ACTIVE_POWER_LATENCY_MS;
+	psTimingInfo->ui32ActivePowManLatencyms = sgx_apm_latency;
 	psTimingInfo->ui32uKernelFreq = SYS_SGX_PDS_TIMER_FREQ;
 #endif
 

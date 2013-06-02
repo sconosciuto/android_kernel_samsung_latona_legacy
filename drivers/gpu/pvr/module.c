@@ -123,6 +123,9 @@ module_param(gPVRDebugLevel, uint, 0644);
 MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)");
 #endif 
 
+uint sgx_apm_latency = SYS_SGX_ACTIVE_POWER_LATENCY_MS;
+module_param(sgx_apm_latency, uint, 0644);
+
 #if defined(CONFIG_ION_OMAP)
 #include <linux/ion.h>
 #include <linux/omap_ion.h>
