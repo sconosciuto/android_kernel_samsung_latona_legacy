@@ -722,7 +722,6 @@ static ssize_t L_enable_show(struct device *dev, struct device_attribute *attr, 
 static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
     ssize_t ret = strlen(buf);
-    int enabled = 0;
 
     trace_in();
 
@@ -738,7 +737,6 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
     }
     else if(strncmp(buf, "1", 1) == 0 )
     {
-        enabled = 1;
         if( L_dev_polling_start() != 0 )
         {
             printk(KERN_ERR "L_dev_polling_start() : fail!! \n");
@@ -773,7 +771,6 @@ static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, 
 {
     ssize_t ret = strlen(buf);
     unsigned int delay;
-    int enabled = 0;
     
     trace_in();
 
@@ -781,14 +778,6 @@ static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, 
     delay /= 1000*1000; //nanoseconds->milliseconds
     L_dev_set_polling_interval(delay ? delay : 1);
 
-    if( L_dev_get_polling_state() == L_SYSFS_POLLING_ON)
-    {
-        enabled = 1;
-    }
-    else
-    {
-        enabled = 0;
-    }
     debug("   sensor L_interval_store() : %lu sec", delay );
 
     trace_out();
