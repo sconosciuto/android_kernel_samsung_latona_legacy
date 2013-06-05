@@ -101,7 +101,6 @@ typedef struct
 	u16 device_state;
 	u8 regs[NUM_OF_REGS];
 	struct input_dev *inputdevice;
-	int delay;
 } P_device_t;
 
 /* extern functions */
@@ -1023,13 +1022,10 @@ static int i2c_write( u8 reg )
 }
 
 /*static functions for OSCAR*/
-static ssize_t P_delay_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t P_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t P_enable_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t P_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 static ssize_t P_data_show(struct device *dev, struct device_attribute *attr, char *buf);
 
-static DEVICE_ATTR(poll_delay, S_IRUGO|S_IWUSR|S_IWGRP, P_delay_show, P_delay_store);
 static DEVICE_ATTR(enable, S_IRUGO|S_IWUSR|S_IWGRP, P_enable_show, P_enable_store);
 static DEVICE_ATTR(adc, S_IRUGO, P_data_show, NULL);
 
@@ -1039,7 +1035,6 @@ static struct attribute *proximity_attributes[] = {
 };
 
 static struct attribute *P_attributes[] = {
-    &dev_attr_poll_delay.attr,
     &dev_attr_enable.attr,
     NULL
 };
@@ -1161,49 +1156,6 @@ static ssize_t P_enable_store(struct device *dev, struct device_attribute *attr,
 		}
 
 	trace_out();
-	return ret;
-}
-
-
-static ssize_t P_delay_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	size_t ret;
-	trace_in();
-
-	debug("   P_interval_show()");
-	ret = sprintf(buf, "%d\n", P_dev.delay);
-
-	trace_out();
-	return ret;
-}
-
-static ssize_t P_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-
-    int enabled = 0;
-    u16 power_state, mode;
-
-	ssize_t ret = strlen(buf);
-	trace_in();
-
-    if( P_dev_get_pwrstate_mode(&power_state, &mode) < 0 )
-    {
-        enabled = 0;
-    }
-    else
-    {
-        if( power_state == P_SHUTDOWN )
-        {
-            enabled = 0;
-        }
-        else if ( (mode == P_MODE_B) && (power_state == P_OPERATIONAL) )
-        {
-            enabled = 1;
-        }        
-    }
-
-    sscanf(buf, "%d", &P_dev.delay);
-
 	return ret;
 }
 
