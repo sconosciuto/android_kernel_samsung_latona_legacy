@@ -1136,7 +1136,7 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 						/* cal was good - don't need to check any more */
 						cal_check_flag = 0;
 						qt_timer_state = 0;
-						qt_time_point = 0;
+						qt_time_point = jiffies_to_msecs(jiffies);
 
 #if TSP_DEBUG
 						printk(KERN_DEBUG "[TSP] reset acq atchcalst=%d, atchcalsthr=%d\n", config_normal.acquisition_config.atchcalst, config_normal.acquisition_config.atchcalsthr );
@@ -1167,7 +1167,7 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 				/* cal was bad - must recalibrate and check afterwards */
 				calibrate_chip();
 				qt_timer_state = 0;
-				qt_time_point = 0;
+				qt_time_point = jiffies_to_msecs(jiffies);
 			}
 			else
 			{
@@ -1178,7 +1178,7 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 				 * message to confirm */
 				cal_check_flag = 1;
 				qt_timer_state= 0;
-				qt_time_point = 0;
+				qt_time_point = jiffies_to_msecs(jiffies);
 			}
 		}
 	}
