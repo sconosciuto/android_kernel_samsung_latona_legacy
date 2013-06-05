@@ -721,7 +721,7 @@ static ssize_t L_enable_show(struct device *dev, struct device_attribute *attr, 
 
 static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-    ssize_t ret = strlen(buf);
+    ssize_t ret = count;
 
     trace_in();
 
@@ -730,7 +730,7 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
         if( L_dev_polling_stop() != 1 )
         {
             printk(KERN_ERR "L_dev_polling_stop() : fail!! \n");
-            ret = 0;
+            ret = -EPERM;
         }
         pl_madc_power_off();
         pl_sensor_power_off();
@@ -740,7 +740,7 @@ static ssize_t L_enable_store(struct device *dev, struct device_attribute *attr,
         if( L_dev_polling_start() != 0 )
         {
             printk(KERN_ERR "L_dev_polling_start() : fail!! \n");
-            ret = 0;
+            ret = -EPERM;
         }
         turn_resources_on_for_adc();
 
@@ -769,7 +769,6 @@ static ssize_t L_delay_show(struct device *dev, struct device_attribute *attr, c
 
 static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-    ssize_t ret = strlen(buf);
     unsigned int delay;
     
     trace_in();
@@ -782,7 +781,7 @@ static ssize_t L_delay_store(struct device *dev, struct device_attribute *attr, 
 
     trace_out();
 
-    return ret;
+    return count;
 
 }
 

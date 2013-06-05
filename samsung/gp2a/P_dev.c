@@ -1128,27 +1128,25 @@ static ssize_t P_enable_show(struct device *dev, struct device_attribute *attr, 
 
 static ssize_t P_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	ssize_t ret = 0;
+	ssize_t ret = count;
 	trace_in();
 	
 	if (strncmp(buf, "0", 1) == 0 ) 
 		{
-			ret = 1;
 			printk("proximity off\n");
 			if( P_dev_shutdown() < 0 )
 			{
 				printk("P_dev_shutdown() : fail!! \n");
-				ret = -1;
+				ret = -EPERM;
 			}
 		}
 	else if(strncmp(buf, "1", 1) == 0 ) 
 		{
-			ret = 1;
 			printk("proximity on\n");
 			if( P_dev_powerup_set_op_mode(P_MODE_B) < 0 )
 			{
 				printk("P_dev_powerup_set_op_mode() : fail!! \n");
-				ret = -1;
+				ret = -EPERM;
 			}
 		}
 
