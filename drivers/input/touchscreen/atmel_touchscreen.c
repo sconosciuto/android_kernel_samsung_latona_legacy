@@ -135,6 +135,8 @@ static int g_enable_touchscreen_handler = 0;	// fixed for i2c timeout error.
 int atmel_ts_tk_keycode[] = {KEY_MENU, KEY_BACK};
 #endif
 
+int calibration_disabled = 1;
+
 struct touchscreen_t;
 
 struct touchscreen_t {
@@ -230,6 +232,10 @@ static DEVICE_ATTR(set_write, S_IRUGO | S_IWUSR, set_write_show, set_write_store
 static ssize_t bootcomplete_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t n);
 static struct kobj_attribute bootcomplete_attr =        __ATTR(bootcomplete, 0220, NULL, bootcomplete_store);
 
+static ssize_t disable_calibration_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size);
+static ssize_t disable_calibration_show(struct device *dev, struct device_attribute *attr, char *buf);
+static DEVICE_ATTR(disable_calibration, S_IRUGO | S_IWUSR, disable_calibration_show, disable_calibration_store);
+
 extern void bootcomplete(void);
 extern void enable_autocal_timer(unsigned int value);
 static ssize_t bootcomplete_store(struct kobject *kobj, struct kobj_attribute *attr,
@@ -250,6 +256,30 @@ static ssize_t bootcomplete_store(struct kobject *kobj, struct kobj_attribute *a
 	}
 
 	return n;
+}
+
+static ssize_t disable_calibration_store(struct device *dev, struct device_attribute *attr,
+					const char *buf, size_t size)
+{
+	int value;
+
+	sscanf(buf, "%d", &value);
+
+	if (value == 0) {
+		calibration_disabled = 0;
+	} else if (value == 1) {
+		calibration_disabled = 1;
+	} else {
+		printk(KERN_ERR "%s: Invalid value\n", __func__);
+		return -EINVAL;
+	}
+
+	return size;
+}
+
+static ssize_t disable_calibration_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", calibration_disabled);
 }
 
 /*------------------------------ for tunning ATmel - end ----------------------------*/
@@ -985,6 +1015,12 @@ ts_kobj = kobject_create_and_add("touchscreen", NULL);
 
 	error = sysfs_create_file(ts_kobj,
 				  &bootcomplete_attr.attr);
+	if (error) {
+		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
+		return error;
+	}
+
+	error = sysfs_create_file(ts_kobj, &dev_attr_disable_calibration.attr);
 	if (error) {
 		printk(KERN_ERR "sysfs_create_file failed: %d\n", error);
 		return error;
