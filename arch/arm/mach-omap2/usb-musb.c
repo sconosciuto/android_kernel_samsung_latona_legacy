@@ -505,9 +505,9 @@ static struct android_usb_platform_data andusb_plat = {
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 /* soonyong.cho : refered from S1 */
 	.vendor_id		= SAMSUNG_VENDOR_ID,
-	.product_id		= SAMSUNG_KIES_PRODUCT_ID,
-	.manufacturer_name	= "SAMSUNG",
-	.product_name		= "SAMSUNG_Android",
+	.product_id		= SAMSUNG_UMS_PRODUCT_ID,
+	.manufacturer_name	= "Samsung",
+	.product_name		= "GT-I9003",
 #else
 	.vendor_id		= OMAP_VENDOR_ID,
 	.product_id		= OMAP_UMS_PRODUCT_ID,
