@@ -850,7 +850,7 @@ uint8_t write_proximity_config(touch_proximity_t23_config_t cfg);
 uint8_t diagnostic_chip(uint8_t mode);
 uint8_t backup_config(void);
 uint8_t reset_chip(void);
-uint8_t calibrate_chip(void);
+uint8_t calibrate_chip(int);
 U8 read_changeline(void);
 uint8_t write_keyarray_config(uint8_t instance, touch_keyarray_t15_config_t cfg);
 uint8_t get_message(void);
@@ -1009,7 +1009,8 @@ void enable_autocal_timer(unsigned int value)
 // ryun 20100208 
 void check_chip_calibration(unsigned char one_touch_input_flag)
 {
-	if (calibration_disabled)
+	// Make sure the last calibration was good
+	if (calibration_disabled && !cal_check_flag)
 		return;
 
 	uint8_t data_buffer[100] = { 0 };
@@ -1172,7 +1173,7 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 			{
 				printk("[TSP] calibration was bad\n");
 				/* cal was bad - must recalibrate and check afterwards */
-				calibrate_chip();
+				calibrate_chip(1);
 				qt_timer_state = 0;
 				qt_time_point = jiffies_to_msecs(jiffies);
 			}
@@ -1272,7 +1273,7 @@ int atmel_suspend(void)
 int atmel_resume(void)
 {
 	restore_power_config();
-	calibrate_chip();
+	calibrate_chip(0);
 
 	if(is_suspend_state==2) {
 		set_tsp_for_ta_detect(ta_state);
@@ -2135,17 +2136,17 @@ uint8_t reset_chip(void)
  * @return WRITE_MEM_OK if writing the command to touch chip was successful.
  * 
  */
-uint8_t calibrate_chip(void)
+uint8_t calibrate_chip(int force)
 {
-   if (calibration_disabled) {
+   if (force) {
+#if TSP_DEBUG
+       printk("[TSP] force calibration\n");
+#endif
+   } else if (calibration_disabled) {
 #if TSP_DEBUG
        printk("[TSP] skip calibration\n");
 #endif
        return WRITE_MEM_OK;
-   } else {
-#if TSP_DEBUG
-       printk("[TSP] don't skip calibration\n");
-#endif
    }
 
    uint8_t data = 1u;
@@ -3295,7 +3296,7 @@ U8 read_mem(U16 start, U8 size, U8 *mem)
 				gpio_direction_input(OMAP_GPIO_TOUCH_INT);
 				gpio_set_value(OMAP_GPIO_TOUCH_EN, 1);
 				msleep(80); // recommended value
-				calibrate_chip();
+				calibrate_chip(1);
 			}
 
 			touch_state = 0;
@@ -3426,7 +3427,7 @@ U8 write_mem(U16 start, U8 size, U8 *mem)
 				gpio_direction_input(OMAP_GPIO_TOUCH_INT);
 				gpio_set_value(OMAP_GPIO_TOUCH_EN, 1);
 				msleep(80); // recommended value
-				calibrate_chip();
+				calibrate_chip(1);
 			}
 
 			touch_state = 0;

@@ -286,7 +286,7 @@ static ssize_t disable_calibration_show(struct device *dev, struct device_attrib
 
 extern void restore_acquisition_config(void);
 extern void restore_power_config(void);
-extern uint8_t calibrate_chip(void);
+extern uint8_t calibrate_chip(int);
 
 static unsigned char menu_button = 0;
 static unsigned char back_button = 0;
@@ -557,7 +557,7 @@ void handle_multi_touch(uint8_t *atmel_msg)
 					gpio_direction_input(OMAP_GPIO_TOUCH_INT);
 					gpio_set_value(OMAP_GPIO_TOUCH_EN, 1);
 					msleep(80); // recommended value
-					calibrate_chip();
+					calibrate_chip(1);
 				}
 
 				touch_state = 0;

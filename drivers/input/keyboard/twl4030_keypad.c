@@ -37,6 +37,10 @@
 void ( *onedram_cp_force_crash ) ( void );
 EXPORT_SYMBOL( onedram_cp_force_crash );
 
+/* defined in drivers/input/touchscreen/atmel_touch_602240.c */
+extern uint8_t calibrate_chip(int);
+extern int is_suspend_state;
+
 extern int home_key_press_status;
 
 /*
@@ -216,8 +220,12 @@ static int twl4030_read_kp_matrix_state(struct twl4030_keypad *kp, u16 *state)
 
 		if( onedram_cp_force_crash )
 			onedram_cp_force_crash();
-	}
+	} else
 #endif
+	if((new_state[1] == 2) && (new_state[2] == 2) && !is_suspend_state) {
+		printk(KERN_DEBUG "%s : Force touchscreen calibration\n", __func__ );
+		calibrate_chip(1);
+	}
 
 	if (ret >= 0)
 		for (row = 0; row < kp->n_rows; row++)
