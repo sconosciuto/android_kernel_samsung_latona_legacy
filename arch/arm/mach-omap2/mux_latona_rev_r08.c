@@ -85,6 +85,7 @@ static unsigned int __omap_board_output_gpio[][3] = {
 	SEC_OMAP_OUTPUT_GPIO(OMAP_GPIO_ALS_EN, 0)
 	SEC_OMAP_OUTPUT_GPIO(OMAP_GPIO_CON_CP_SEL, 0)
 	SEC_OMAP_OUTPUT_GPIO(OMAP_GPIO_MSENSE_NRST, 0)
+	SEC_OMAP_OUTPUT_GPIO(OMAP_GPIO_UART_SEL, 1) 
 };	/* end array __omap_output_gpio */
 
 unsigned int sec_board_output_gpio_size = ARRAY_SIZE(__omap_board_output_gpio);

@@ -227,16 +227,7 @@ static void infinion_on(struct modemctl *mc)
 
 	gpio_set_value(mc->gpio_cp_reset, 1);
 
-	msleep(100);
-
-	if( gpio_get_value(126) == 1 ) {
-		gpio_set_value(126, 0);	//uart connected with CP
-		dev_dbg( mc->dev, "%s: (%d) GPIO_UART_SEL = %d\n", __func__, __LINE__, gpio_get_value(126) );
-	} else {
-		dev_dbg( mc->dev, "%s: (%d) GPIO_UART_SEL = %d\n", __func__, __LINE__, gpio_get_value(126) );
-	}
-
-	msleep(200);
+	msleep(300);
 	gpio_set_value(mc->gpio_pda_active, 1);
 
 	if(mc->gpio_reset_req_n)
@@ -250,15 +241,7 @@ static void infinion_off(struct modemctl *mc)
 	dev_dbg(mc->dev, "%s\n", __func__);
 	if(!mc->gpio_cp_reset )
 		return;
-	
-	//test start
-	if( gpio_get_value(126) == 0 ){
-		gpio_set_value(126, 1);	//uart connected with AP
-		dev_dbg( mc->dev, "%s: GPIO_UART_SEL = %d\n", __func__, gpio_get_value(126) );
-		msleep(1);
-	}
-	//test end
-	
+
 	gpio_set_value(mc->gpio_cp_reset, 0);
 }
 
