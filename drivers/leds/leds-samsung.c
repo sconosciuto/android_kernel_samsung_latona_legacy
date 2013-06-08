@@ -11,6 +11,7 @@
 #include <linux/miscdevice.h>
 #include <plat/mux.h>
 #include <mach/gpio.h>
+#include <linux/delay.h>
 
 #define DRIVER_NAME "secLedDriver"
 
@@ -95,6 +96,21 @@ void suspend_touchkey_led()
 }
 
 EXPORT_SYMBOL(suspend_touchkey_led);
+
+void blink_touchkey_led(int count, unsigned int msecs)
+{
+	int i;
+
+	if (gpio_get_value(OMAP_GPIO_LED_EN1) || gpio_get_value(OMAP_GPIO_LED_EN2)) {
+		gpio_set_value(OMAP_GPIO_LED_EN1, 0);
+		gpio_set_value(OMAP_GPIO_LED_EN2, 0);
+	}
+	for (i = 1; i <= count * 2; i++) {
+		msleep(msecs);
+		gpio_set_value(OMAP_GPIO_LED_EN1, i % 2);
+		gpio_set_value(OMAP_GPIO_LED_EN2, i % 2);
+	}
+}
 
 static void sec_led_set(struct led_classdev *led_cdev,
 	enum led_brightness value)
