@@ -101,15 +101,20 @@ void blink_touchkey_led(int count, unsigned int msecs)
 {
 	int i;
 
-	if (gpio_get_value(OMAP_GPIO_LED_EN1) || gpio_get_value(OMAP_GPIO_LED_EN2)) {
+	// Make the first blink always visible
+	if (gpio_get_value(OMAP_GPIO_LED_EN1)) {
 		gpio_set_value(OMAP_GPIO_LED_EN1, 0);
 		gpio_set_value(OMAP_GPIO_LED_EN2, 0);
+		msleep(50);
 	}
-	for (i = 1; i <= count * 2; i++) {
-		msleep(msecs);
+
+	for (i = 1; i < count * 2; i++) {
 		gpio_set_value(OMAP_GPIO_LED_EN1, i % 2);
 		gpio_set_value(OMAP_GPIO_LED_EN2, i % 2);
+		msleep(msecs);
 	}
+	gpio_set_value(OMAP_GPIO_LED_EN1, 0);
+	gpio_set_value(OMAP_GPIO_LED_EN2, 0);
 }
 
 static void sec_led_set(struct led_classdev *led_cdev,
