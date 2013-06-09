@@ -226,7 +226,7 @@ static int twl4030_read_kp_matrix_state(struct twl4030_keypad *kp, u16 *state)
 #endif
 	if((new_state[1] == 2) && (new_state[2] == 2) && !is_suspend_state) {
 		printk(KERN_DEBUG "%s : Force touchscreen calibration\n", __func__ );
-		blink_touchkey_led(2, 100);
+		blink_touchkey_led(2, 50);
 		calibrate_chip(1);
 	}
 
