@@ -33,6 +33,9 @@
 #include <linux/workqueue.h>
 #include <linux/uaccess.h>
 #include <linux/gp2a.h>
+#include <linux/i2c/twl.h>
+#include <linux/i2c/twl4030-madc.h>
+#include <linux/regulator/consumer.h>
 
 
 /* Note about power vs enable/disable:
@@ -97,7 +100,77 @@ struct gp2a_data {
 	struct mutex power_lock;
 	struct wake_lock prx_wake_lock;
 	struct workqueue_struct *wq;
+
+	struct regulator *vaux1;
+	struct regulator *vaux2;
+	struct regulator *usb3v1;
+	struct regulator *usb1v8;
+	struct regulator *usb1v5;
 };
+
+// To turn on USB block in PMIC
+#define VSEL_VINTANA2_2V75  0x01
+#define CARKIT_ANA_CTRL     0xBB
+#define SEL_MADC_MCPC       0x08
+
+static void turn_resources_on_for_adc(struct gp2a_data *gp2a)
+{
+	int ret;
+	u8 val = 0;
+
+	ret = twl_i2c_read_u8(TWL4030_MODULE_MADC, &val, TWL4030_MADC_CTRL1);
+	val &= ~TWL4030_MADC_MADCON;
+	ret = twl_i2c_write_u8(TWL4030_MODULE_MADC, val, TWL4030_MADC_CTRL1);
+	msleep(10);
+
+	ret = twl_i2c_read_u8(TWL4030_MODULE_MADC, &val, TWL4030_MADC_CTRL1);
+	val |= TWL4030_MADC_MADCON;
+	ret = twl_i2c_write_u8(TWL4030_MODULE_MADC, val, TWL4030_MADC_CTRL1);
+
+	if (regulator_enable(gp2a->usb3v1))
+		pr_err("%s: failed to enable regulator usb3v1\n", __func__);
+	if (regulator_enable(gp2a->usb1v8))
+		pr_err("%s: failed to enable regulator usb1v8\n", __func__);
+	if (regulator_enable(gp2a->usb1v5))
+		pr_err("%s: failed to enable regulator usb1v5\n", __func__);
+
+	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x14, 0x7D /*VUSB_DEDICATED1*/);
+	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x0, 0x7E /*VUSB_DEDICATED2*/);
+	twl_i2c_read_u8(TWL4030_MODULE_USB, &val, 0xFE /*PHY_CLK_CTRL*/);
+	val |= 0x1;
+	twl_i2c_write_u8(TWL4030_MODULE_USB, val, 0xFE);
+
+	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, VSEL_VINTANA2_2V75, TWL4030_VINTANA2_DEDICATED);
+	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x20, TWL4030_VINTANA2_DEV_GRP);
+	twl_i2c_write_u8(TWL4030_MODULE_USB, SEL_MADC_MCPC, CARKIT_ANA_CTRL);
+
+	if (regulator_disable(gp2a->usb1v8))
+		pr_err("%s: failed to disable regulator usb1v8\n", __func__);
+	if (regulator_disable(gp2a->usb1v5))
+		pr_err("%s: failed to disable regulator usb1v5\n", __func__);
+}
+
+static void enable_vaux(struct gp2a_data *gp2a)
+{
+	if (regulator_enable(gp2a->vaux1))
+		pr_err("%s: failed to enable regulator vaux1\n", __func__);
+	if (regulator_enable(gp2a->vaux2))
+		pr_err("%s: failed to enable regulator vaux2\n", __func__);
+}
+
+static void disable_usb(struct gp2a_data *gp2a)
+{
+	if (regulator_disable(gp2a->usb3v1))
+		pr_err("%s: failed to disable regulator usb3v1\n", __func__);
+}
+
+static void disable_vaux(struct gp2a_data *gp2a)
+{
+	if (regulator_disable(gp2a->vaux1))
+		pr_err("%s: failed to disable regulator vaux1\n", __func__);
+	if (regulator_disable(gp2a->vaux2))
+		pr_err("%s: failed to disable regulator vaux2\n", __func__);
+}
 
 int gp2a_i2c_write(struct gp2a_data *gp2a, u8 reg, u8 *val)
 {
@@ -225,15 +298,21 @@ static ssize_t light_enable_store(struct device *dev,
 	gp2a_dbgmsg("new_value = %d, old state = %d\n",
 		    new_value, (gp2a->power_state & LIGHT_ENABLED) ? 1 : 0);
 	if (new_value && !(gp2a->power_state & LIGHT_ENABLED)) {
-		if (!gp2a->power_state)
+		if (!gp2a->power_state) {
+			turn_resources_on_for_adc(gp2a);
 			gp2a->pdata->power(true);
+			enable_vaux(gp2a);
+		}
 		gp2a->power_state |= LIGHT_ENABLED;
 		gp2a_light_enable(gp2a);
 	} else if (!new_value && (gp2a->power_state & LIGHT_ENABLED)) {
 		gp2a_light_disable(gp2a);
 		gp2a->power_state &= ~LIGHT_ENABLED;
-		if (!gp2a->power_state)
+		if (!gp2a->power_state) {
+			disable_usb(gp2a);
 			gp2a->pdata->power(false);
+			disable_vaux(gp2a);
+		}
 	}
 	mutex_unlock(&gp2a->power_lock);
 	return size;
@@ -259,8 +338,11 @@ static ssize_t proximity_enable_store(struct device *dev,
 	gp2a_dbgmsg("new_value = %d, old state = %d\n",
 		    new_value, (gp2a->power_state & PROXIMITY_ENABLED) ? 1 : 0);
 	if (new_value && !(gp2a->power_state & PROXIMITY_ENABLED)) {
-		if (!gp2a->power_state)
+		if (!gp2a->power_state) {
+			turn_resources_on_for_adc(gp2a);
 			gp2a->pdata->power(true);
+			enable_vaux(gp2a);
+		}
 		gp2a->power_state |= PROXIMITY_ENABLED;
 		enable_irq(gp2a->irq);
 		enable_irq_wake(gp2a->irq);
@@ -273,8 +355,11 @@ static ssize_t proximity_enable_store(struct device *dev,
 		disable_irq(gp2a->irq);
 		gp2a_i2c_write(gp2a, REGS_OPMOD, &reg_defaults[0]);
 		gp2a->power_state &= ~PROXIMITY_ENABLED;
-		if (!gp2a->power_state)
+		if (!gp2a->power_state) {
+			disable_usb(gp2a);
 			gp2a->pdata->power(false);
+			disable_vaux(gp2a);
+		}
 	}
 	mutex_unlock(&gp2a->power_lock);
 	return size;
@@ -440,6 +525,11 @@ static int gp2a_i2c_probe(struct i2c_client *client,
 	gp2a->i2c_client = client;
 	i2c_set_clientdata(client, gp2a);
 
+	gp2a->vaux1 = regulator_get(&client->dev, "vaux1");
+	gp2a->vaux2 = regulator_get(&client->dev, "vaux2");
+	gp2a->usb3v1 = regulator_get(&client->dev, "usb3v1");
+	gp2a->usb1v8 = regulator_get(&client->dev, "usb1v8");
+	gp2a->usb1v5 = regulator_get(&client->dev, "usb1v5");
 
 	wake_lock_init(&gp2a->prx_wake_lock, WAKE_LOCK_SUSPEND,
 		"prx_wake_lock");
@@ -557,8 +647,11 @@ static int gp2a_suspend(struct device *dev)
 	struct gp2a_data *gp2a = i2c_get_clientdata(client);
 	if (gp2a->power_state & LIGHT_ENABLED)
 		gp2a_light_disable(gp2a);
-	if (gp2a->power_state == LIGHT_ENABLED)
+	if (gp2a->power_state == LIGHT_ENABLED) {
+		disable_usb(gp2a);
 		gp2a->pdata->power(false);
+		disable_vaux(gp2a);
+	}
 	return 0;
 }
 
@@ -567,8 +660,11 @@ static int gp2a_resume(struct device *dev)
 	/* Turn power back on if we were before suspend. */
 	struct i2c_client *client = to_i2c_client(dev);
 	struct gp2a_data *gp2a = i2c_get_clientdata(client);
-	if (gp2a->power_state == LIGHT_ENABLED)
+	if (gp2a->power_state == LIGHT_ENABLED) {
+		turn_resources_on_for_adc(gp2a);
 		gp2a->pdata->power(true);
+		enable_vaux(gp2a);
+	}
 	if (gp2a->power_state & LIGHT_ENABLED)
 		gp2a_light_enable(gp2a);
 	return 0;
@@ -590,8 +686,17 @@ static int gp2a_i2c_remove(struct i2c_client *client)
 		gp2a->power_state = 0;
 		if (gp2a->power_state & LIGHT_ENABLED)
 			gp2a_light_disable(gp2a);
+		disable_usb(gp2a);
 		gp2a->pdata->power(false);
+		disable_vaux(gp2a);
 	}
+
+	if (gp2a->vaux1) regulator_put(gp2a->vaux1);
+	if (gp2a->vaux2) regulator_put(gp2a->vaux2);
+	if (gp2a->usb3v1) regulator_put(gp2a->usb3v1);
+	if (gp2a->usb1v8) regulator_put(gp2a->usb1v8);
+	if (gp2a->usb1v5) regulator_put(gp2a->usb1v5);
+
 	mutex_destroy(&gp2a->power_lock);
 	wake_lock_destroy(&gp2a->prx_wake_lock);
 	kfree(gp2a);
