@@ -135,7 +135,7 @@ static void gp2a_light_enable(struct gp2a_data *gp2a)
 	 * Set far out of range ABS_MISC value, -1024, to enable real value to
 	 * go through next.
 	 */
-	input_abs_set_val(gp2a->light_input_dev, ABS_MISC, -1024);
+	gp2a->light_input_dev->abs[ABS_MISC] = -1024;
 	hrtimer_start(&gp2a->timer, ktime_set(0, LIGHT_SENSOR_START_TIME_DELAY),
 					HRTIMER_MODE_REL);
 }
