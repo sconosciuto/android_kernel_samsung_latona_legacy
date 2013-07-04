@@ -39,6 +39,8 @@
 #include <linux/leds.h>
 #include "twl4030.h"
 #include <linux/wakelock.h>
+#include <linux/i2c/twl4030-madc.h>
+#include <linux/gp2a.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -90,6 +92,8 @@ struct s5ka3dfx_platform_data omap_board_s5ka3dfx_platform_data;
 
 #define OMAP_GPIO_TSP_INT 142
 #define BLUETOOTH_UART	UART2
+
+#define GP2A_LIGHT_ADC_CHANNEL  4
 
 static struct wake_lock uart_lock;
 
@@ -750,12 +754,6 @@ static struct platform_device samsung_vibrator_device = {
 	.num_resources = 0,
 };
 
-static struct platform_device samsung_pl_sensor_power_device = {
-	.name = "secPLSensorPower",
-	.id = -1,
-	.num_resources = 0,
-};
-
 #if defined( CONFIG_PHONE_IPC_SPI )
 static struct omap2_mcspi_device_config board_ipc_spi_mcspi_config = {
 	.turbo_mode     =   0,
@@ -787,7 +785,6 @@ static struct platform_device *board_devices[] __initdata = {
 	&samsung_battery_device,
 	&samsung_charger_device,
 	&samsung_vibrator_device,
-	&samsung_pl_sensor_power_device,
 	&samsung_led_device,
 
 #if defined( CONFIG_SAMSUNG_PHONE_SVNET )
@@ -801,6 +798,24 @@ static struct platform_device *board_devices[] __initdata = {
 #ifdef CONFIG_SWITCH_SIO
     &sec_sio_switch,
 #endif
+};
+
+
+static int gp2a_light_adc_value(void)
+{
+	return twl4030_get_madc_conversion(GP2A_LIGHT_ADC_CHANNEL);
+}
+
+static void gp2a_power(bool on)
+{
+	/* this controls the power supply rail to the gp2a IC */
+	gpio_set_value(OMAP_GPIO_ALS_EN, on);
+}
+
+static struct gp2a_platform_data gp2a_pdata = {
+	.power = gp2a_power,
+	.p_out = OMAP_GPIO_PS_VOUT,
+	.light_adc_value = gp2a_light_adc_value,
 };
 
 static int omap_board_batt_table[] = {
@@ -921,11 +936,10 @@ static struct i2c_board_info __initdata board_i2c_boardinfo1[] = {
 		.irq = OMAP_GPIO_IRQ(OMAP_GPIO_FUEL_INT_N),
 	},
 #endif	
-#if !defined(CONFIG_INPUT_GP2A_USE_GPIO_I2C)
 	{
 		I2C_BOARD_INFO("gp2a", 0x44),
+		.platform_data = &gp2a_pdata,
 	},
-#endif
 #if !defined(CONFIG_INPUT_YAS529_USE_GPIO_I2C)
 	{
 		I2C_BOARD_INFO("geomagnetic", 0x2E),
@@ -1158,7 +1172,6 @@ void __init omap_board_peripherals_init(void)
 	omap_i2c_init();
 
     platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
-       omap_board_usb_data.sensor_dev = &samsung_pl_sensor_power_device.dev;    // Add for regulator
        
 	spi_register_board_info( board_spi_board_info, ARRAY_SIZE( board_spi_board_info ) );
        
