@@ -1211,6 +1211,7 @@ CONFIG_INPUT_UINPUT=y
 # CONFIG_INPUT_CMA3000_I2C is not set
 # CONFIG_INPUT_HMC5843 is not set
 # CONFIG_INPUT_BMP085 is not set
+CONFIG_OPTICAL_GP2A=y
 
 #
 # Hardware I/O ports
@@ -2248,7 +2249,7 @@ CONFIG_INPUT_BMA222_POSITION=2
 #
 # Sharp GP2A proximity/light sensor
 #
-CONFIG_INPUT_GP2A=y
+# CONFIG_INPUT_GP2A is not set
 # CONFIG_INPUT_GP2A_USE_GPIO_I2C is not set
 
 #
