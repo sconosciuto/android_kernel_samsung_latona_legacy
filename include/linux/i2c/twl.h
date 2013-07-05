@@ -579,7 +579,6 @@ enum twl4030_usb_mode {
 
 struct twl4030_usb_data {
 	enum twl4030_usb_mode	usb_mode;
-	        struct device *sensor_dev;
 };
 
 struct twl4030_ins {
