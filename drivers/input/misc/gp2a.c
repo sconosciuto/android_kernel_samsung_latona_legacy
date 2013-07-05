@@ -108,6 +108,32 @@ struct gp2a_data {
 	struct regulator *usb1v5;
 };
 
+static int adc_vs_lux_table[][3] = {
+	{ 2, 8 },
+	{ 5, 10 },
+	{ 8, 45 },
+	{ 10, 69 },
+	{ 12, 79 },
+	{ 22, 102 },
+	{ 30, 159 },
+	{ 50, 196 },
+	{ 75, 200 },
+	{ 110, 245 },
+	{ 150, 295 },
+	{ 170, 307 },
+	{ 300, 326 },
+	{ 460, 378 },
+	{ 1000, 463 },
+	{ 1500, 500 },
+	{ 1700, 515 },
+	{ 2000, 526 },
+	{ 2850, 561 },
+	{ 3450, 570 },
+	{ 6000, 603 },
+	{ 11000, 648 },    /* lux, adc value when usb connected, adc value */
+	{ 0, 0, 0}
+};
+
 // To turn on USB block in PMIC
 #define VSEL_VINTANA2_2V75  0x01
 #define CARKIT_ANA_CTRL     0xBB
@@ -198,6 +224,29 @@ int gp2a_i2c_write(struct gp2a_data *gp2a, u8 reg, u8 *val)
 			return 0;
 	}
 	return err;
+}
+
+static int gp2a_light_adc_to_lux(int adc_val)
+{
+	int i;
+	int lux = -1024;
+
+	for (i = 0; adc_vs_lux_table[i+1][0] > 0; i++) {
+		// in case the adc value is smaller than 30 lux
+		if (adc_val < adc_vs_lux_table[i][1]) {
+			lux = adc_vs_lux_table[i][0] * adc_val / adc_vs_lux_table[i][1];
+			break;
+		}
+
+		if (adc_val >= adc_vs_lux_table[i][1] && adc_val < adc_vs_lux_table[i+1][1]) {
+			lux = (adc_vs_lux_table[i+1][0] - adc_vs_lux_table[i][0]) /
+			      (adc_vs_lux_table[i+1][1] - adc_vs_lux_table[i][1]) * 
+			      (adc_val - adc_vs_lux_table[i][1]) +
+			      adc_vs_lux_table[i][0];
+			break;
+		}
+	}
+	return lux;
 }
 
 static void gp2a_light_enable(struct gp2a_data *gp2a)
@@ -405,7 +454,7 @@ static void gp2a_work_func_light(struct work_struct *work)
 		return;
 	}
 	gp2a_dbgmsg("adc returned light value %d\n", adc);
-	input_report_abs(gp2a->light_input_dev, ABS_MISC, adc);
+	input_report_abs(gp2a->light_input_dev, ABS_MISC, gp2a_light_adc_to_lux(adc));
 	input_sync(gp2a->light_input_dev);
 }
 
