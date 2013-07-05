@@ -108,7 +108,7 @@ struct gp2a_data {
 	struct regulator *usb1v5;
 };
 
-static int adc_vs_lux_table[][3] = {
+static int adc_vs_lux_table[][2] = {
 	{ 2, 8 },
 	{ 5, 10 },
 	{ 8, 45 },
@@ -130,8 +130,8 @@ static int adc_vs_lux_table[][3] = {
 	{ 2850, 561 },
 	{ 3450, 570 },
 	{ 6000, 603 },
-	{ 11000, 648 },    /* lux, adc value when usb connected, adc value */
-	{ 0, 0, 0}
+	{ 11000, 648 },    /* lux, adc value */
+	{ 0, 0 }
 };
 
 // To turn on USB block in PMIC
@@ -229,7 +229,7 @@ int gp2a_i2c_write(struct gp2a_data *gp2a, u8 reg, u8 *val)
 static int gp2a_light_adc_to_lux(int adc_val)
 {
 	int i;
-	int lux = -1024;
+	int lux = 11000;
 
 	for (i = 0; adc_vs_lux_table[i+1][0] > 0; i++) {
 		// in case the adc value is smaller than 30 lux
