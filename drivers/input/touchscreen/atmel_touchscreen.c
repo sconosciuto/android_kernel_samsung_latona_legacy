@@ -1156,11 +1156,14 @@ void atmel_ts_early_suspend(struct early_suspend *h)
 {
 //	melfas_ts_suspend(PMSG_SUSPEND);
 	touchscreen_suspend(&touchscreen_device, PMSG_SUSPEND);
+	gpio_set_value(OMAP_GPIO_TOUCH_EN, 0);
 }
 
 void atmel_ts_late_resume(struct early_suspend *h)
 {
 //	melfas_ts_resume();
+	gpio_set_value(OMAP_GPIO_TOUCH_EN, 1);
+	msleep(80);
 	touchscreen_resume(&touchscreen_device);
 }
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
