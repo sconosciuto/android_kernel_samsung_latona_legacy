@@ -4716,23 +4716,23 @@ ssize_t set_write_show(struct device *dev, struct device_attribute *attr, char *
 
 	i += scnprintf(buf + i, PAGE_SIZE - i, "\n                  === set_noise ===\n");
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 0.ctrl  =  %3d             1.gcaful(2bts) = %d\n",
-				config_normal.gripfacesuppression_config.ctrl,
-				config_normal.gripfacesuppression_config.xlogrip);
+				config_normal.noise_suppression_config.ctrl,
+				config_normal.noise_suppression_config.gcaful);
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 2.gcafll(2bts) = %5d     3.actvgcafvalid = %d\n",
-				config_normal.gripfacesuppression_config.xhigrip,
-				config_normal.gripfacesuppression_config.ylogrip);
+				config_normal.noise_suppression_config.gcafll,
+				config_normal.noise_suppression_config.actvgcafvalid);
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 4.noisethr = %3d           5.freqhopscale = %3d\n",
-				config_normal.gripfacesuppression_config.yhigrip,
-				config_normal.gripfacesuppression_config.maxtchs);
+				config_normal.noise_suppression_config.noisethr,
+				config_normal.noise_suppression_config.freqhopscale);
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 6.freq[0] = %3d            7.freq[1] = %3d\n",
-				config_normal.gripfacesuppression_config.reserved,
-				config_normal.gripfacesuppression_config.szthr1);
+				config_normal.noise_suppression_config.freq[0],
+				config_normal.noise_suppression_config.freq[1]);
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 8.freq[2] = %3d            9.freq[3] = %3d\n",
-				config_normal.gripfacesuppression_config.szthr2,
-				config_normal.gripfacesuppression_config.shpthr1);
+				config_normal.noise_suppression_config.freq[2],
+				config_normal.noise_suppression_config.freq[3]);
 	i += scnprintf(buf + i, PAGE_SIZE - i, "10.freq[4] = %3d           11.idlegcafvalid = %3d\n",
-				config_normal.gripfacesuppression_config.shpthr2,
-				config_normal.gripfacesuppression_config.supextto);
+				config_normal.noise_suppression_config.freq[4],
+				config_normal.noise_suppression_config.idlegcafvalid);
 
 	i += scnprintf(buf + i, PAGE_SIZE - i, "\n                 === set_total  ===\n");
 	i += scnprintf(buf + i, PAGE_SIZE - i, " 0.linearization_config.ctrl = %d\n",
